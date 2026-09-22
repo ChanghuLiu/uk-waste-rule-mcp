@@ -143,9 +143,65 @@ def build_server():
     return server
 
 
+def safe_mcp_surface_mounts(public_ai_app: object) -> list[object]:
+    """Mount one isolated payment-free MCP app under vendor-specific aliases."""
+    from starlette.routing import Mount
+
+    return [Mount("/openai", app=public_ai_app), Mount("/ai", app=public_ai_app)]
+
+
 def main() -> None:
-    server = build_server()
-    server.run(transport="streamable-http", host=os.getenv("HOST", "0.0.0.0"), port=int(os.getenv("PORT", "8000")), json_response=True, stateless_http=True)
+    from contextlib import AsyncExitStack, asynccontextmanager
+
+    import uvicorn
+    from starlette.applications import Starlette
+    from starlette.routing import Mount, Route
+
+    from .public_ai_server import build_public_ai_server
+    from .submission_pages import (
+        openai_apps_challenge,
+        plugin_product_page,
+        privacy_page,
+        support_page,
+        terms_page,
+    )
+
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8000"))
+
+    commercial_server = build_server()
+    commercial_app = commercial_server.streamable_http_app(
+        host=host,
+        json_response=True,
+        stateless_http=True,
+    )
+    public_ai_server = build_public_ai_server()
+    public_ai_app = public_ai_server.streamable_http_app(
+        host=host,
+        json_response=True,
+        stateless_http=True,
+    )
+
+    @asynccontextmanager
+    async def lifespan(_app):
+        async with AsyncExitStack() as stack:
+            await stack.enter_async_context(commercial_server.session_manager.run())
+            await stack.enter_async_context(public_ai_server.session_manager.run())
+            yield
+
+    app = Starlette(
+        routes=[
+            Route("/waste-rule-preflight", endpoint=plugin_product_page, methods=["GET"]),
+            Route("/plugin/privacy", endpoint=privacy_page, methods=["GET"]),
+            Route("/plugin/terms", endpoint=terms_page, methods=["GET"]),
+            Route("/plugin/support", endpoint=support_page, methods=["GET"]),
+            Route("/.well-known/openai-apps-challenge", endpoint=openai_apps_challenge, methods=["GET"]),
+            *safe_mcp_surface_mounts(public_ai_app),
+            Mount("/", app=commercial_app),
+        ],
+        lifespan=lifespan,
+    )
+    uvicorn.run(app, host=host, port=port)
 
 
 if __name__ == "__main__":
