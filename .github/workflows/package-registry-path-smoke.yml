@@ -51,7 +51,7 @@ jobs:
 
       - name: Verify container without PYTHONPATH workaround
         run: |
-          docker run --rm --entrypoint python uk-waste-rule-mcp:registry-fix - <<'PY'
+          docker run --rm -i --entrypoint python uk-waste-rule-mcp:registry-fix - <<'PY'
           import os
           from uk_waste_rule_mcp.production_bridge import service_info
           from uk_waste_rule_mcp.sources import source_registry, source_registry_path
