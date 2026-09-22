@@ -1,0 +1,94 @@
+name: distribution-readiness-smoke
+
+on:
+  push:
+    branches:
+      - prep/distribution-readiness
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[dev,mcp]'
+          pytest
+
+      - name: Build image
+        run: docker build -t waste-distribution:smoke .
+
+      - name: Run mounted-surface smoke
+        run: |
+          docker run -d --rm --name waste-smoke -p 18080:8000 -e PORT=8000 -e WASTE_PAYMENT_ENFORCED=0 -e WASTE_PUBLIC_MCP_URL=https://example.invalid/mcp waste-distribution:smoke
+          cleanup() { docker logs waste-smoke || true; docker stop waste-smoke >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/health >/tmp/health.json; then break; fi
+            sleep 1
+          done
+
+          for path in waste-rule-preflight plugin/privacy plugin/terms plugin/support; do
+            curl -fsS "http://127.0.0.1:18080/$path" >/dev/null
+          done
+
+          payload='{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+          curl -fsS -H 'content-type: application/json' -d "$payload" http://127.0.0.1:18080/mcp -o /tmp/commercial.json
+          curl -fsS -H 'content-type: application/json' -d "$payload" http://127.0.0.1:18080/openai/mcp -o /tmp/openai.json
+          curl -fsS -H 'content-type: application/json' -d "$payload" http://127.0.0.1:18080/ai/mcp -o /tmp/ai.json
+
+          python - <<'PY'
+          import json
+
+          health=json.load(open("/tmp/health.json"))
+          commercial=json.load(open("/tmp/commercial.json"))
+          openai=json.load(open("/tmp/openai.json"))
+          ai=json.load(open("/tmp/ai.json"))
+
+          commercial_names=[t["name"] for t in commercial["result"]["tools"]]
+          openai_tools=openai["result"]["tools"]
+          ai_tools=ai["result"]["tools"]
+          openai_names=[t["name"] for t in openai_tools]
+          ai_names=[t["name"] for t in ai_tools]
+
+          expected_public=[
+              "waste_rule_info",
+              "list_waste_rules",
+              "waste_source_status",
+              "waste_rule_preflight",
+              "permit_change_impact",
+          ]
+
+          print("DIST_HEALTH="+health["status"])
+          print("DIST_COMMERCIAL_TOOLS="+json.dumps(commercial_names))
+          print("DIST_OPENAI_TOOLS="+json.dumps(openai_names))
+          print("DIST_AI_TOOLS="+json.dumps(ai_names))
+
+          assert health["source_health"]["decision_usable"] is True
+          assert len(commercial_names) == 7
+          assert openai_names == expected_public
+          assert ai_names == expected_public
+          assert openai_tools == ai_tools
+
+          for tool in openai_tools:
+              ann=tool["annotations"]
+              assert ann["readOnlyHint"] is True
+              assert ann["destructiveHint"] is False
+              assert ann["idempotentHint"] is True
+              assert ann["openWorldHint"] is False
+              serialized=json.dumps(tool).lower()
+              assert "x402" not in serialized
+              assert "stripe" not in serialized
+              assert "checkout" not in serialized
+              assert "$0.02" not in serialized
+              assert "$0.03" not in serialized
+
+          print("DISTRIBUTION_READINESS_SMOKE=PASS")
+          PY
