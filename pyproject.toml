@@ -27,3 +27,6 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.data-files]
+"share/uk-waste-rule-mcp" = ["data/source_registry.json"]
