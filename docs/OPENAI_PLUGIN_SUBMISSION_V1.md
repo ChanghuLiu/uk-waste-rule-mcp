@@ -11,9 +11,9 @@ OpenAI Plugin submission portal / remote MCP review.
 - Transport: Streamable HTTP
 - Authentication: none
 - Product page: `https://waste.regevidencehub.com/waste-rule-preflight`
-- Privacy: `https://waste.regevidencehub.com/plugin/privacy`
-- Terms: `https://waste.regevidencehub.com/plugin/terms`
-- Support: `https://waste.regevidencehub.com/plugin/support`
+- Privacy: `https://regevidencehub.com/privacy/`
+- Terms: `https://regevidencehub.com/terms/`
+- Support: `https://regevidencehub.com/support/`
 
 Official review guidance:
 - https://developers.openai.com/plugins/deploy/app-review
@@ -49,7 +49,7 @@ Before submission:
 4. Tool annotations are present and match the read-only boundary.
 5. Structured-output metadata is present.
 6. Server instructions describe England scope, fail-closed evidence behavior and non-approval boundary.
-7. Product/privacy/terms/support pages return HTTP 200.
+7. Product page and shared privacy/terms/support pages return HTTP 200.
 8. `/.well-known/openai-apps-challenge` returns the exact configured challenge token when enabled.
 9. Five positive and three negative test cases pass.
 10. No public-AI response exposes x402, Stripe checkout, paid upgrade steering or payment credentials.
