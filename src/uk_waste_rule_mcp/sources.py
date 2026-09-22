@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -53,10 +55,29 @@ SOURCES: list[dict[str, Any]] = [
 ]
 
 
+def source_registry_path() -> Path:
+    """Resolve the registry consistently for source, container and wheel installs."""
+
+    override = os.getenv("WASTE_SOURCE_REGISTRY_PATH")
+    if override:
+        return Path(override).expanduser()
+
+    module_path = Path(__file__).resolve()
+    candidates = [
+        module_path.parents[2] / "data" / "source_registry.json",
+        Path.cwd() / "data" / "source_registry.json",
+        Path(sys.prefix) / "share" / "uk-waste-rule-mcp" / "source_registry.json",
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return candidates[-1]
+
+
 def source_registry() -> list[dict[str, Any]]:
     """Return the checked-in registry, including monitoring state when available."""
 
-    registry_path = Path(__file__).resolve().parents[2] / "data" / "source_registry.json"
+    registry_path = source_registry_path()
     try:
         payload = json.loads(registry_path.read_text(encoding="utf-8"))
         sources = payload.get("sources", [])
