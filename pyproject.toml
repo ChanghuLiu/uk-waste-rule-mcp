@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uk-waste-rule-mcp"
+version = "0.1.0"
+description = "Evidence-linked England waste-rule and permit-change-impact preflight MCP."
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+mcp = ["mcp>=2,<3"]
+dev = ["pytest>=8,<9"]
+
+[project.scripts]
+uk-waste-rule-mcp = "uk_waste_rule_mcp.server:main"
+uk-waste-source-monitor = "uk_waste_rule_mcp.monitor:main"
+uk-waste-rule-mcp-http = "uk_waste_rule_mcp.production_bridge:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+addopts = "-q"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
