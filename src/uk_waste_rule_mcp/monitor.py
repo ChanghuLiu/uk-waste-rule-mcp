@@ -14,7 +14,7 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from .sources import source_registry
+from .sources import source_registry, source_registry_path
 
 DEFAULT_MAX_AGE_HOURS = 48.0
 USER_AGENT = "RegEvidenceHub-Waste-Source-Monitor/0.1"

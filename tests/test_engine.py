@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
+import json
 
 import pytest
 
 from uk_waste_rule_mcp.engine import classify_waste_route, list_waste_rules, permit_change_impact, waste_preflight
 from uk_waste_rule_mcp.monitor import normalise_visible_text, semantic_sha256, source_health
 from uk_waste_rule_mcp.production_bridge import PRICES, service_info
+from uk_waste_rule_mcp.sources import source_registry, source_registry_path
 from uk_waste_rule_mcp.x402_mcp2 import MCP2X402Gate
 
 
@@ -134,3 +136,27 @@ def test_x402_gate_rejects_missing_configuration_before_importing_provider(monke
         monkeypatch.delenv(key, raising=False)
     with pytest.raises(RuntimeError, match="WASTE_X402_NETWORK is required"):
         MCP2X402Gate()
+
+
+def test_source_registry_contains_reviewed_baselines():
+    records = source_registry()
+    assert len(records) == 6
+    assert all(record.get("baseline_sha256") for record in records)
+    assert all(record.get("last_status") == "UNCHANGED" for record in records)
+
+
+def test_source_registry_path_honours_explicit_override(monkeypatch, tmp_path):
+    registry = tmp_path / "source_registry.json"
+    registry.write_text(
+        json.dumps({
+            "sources": [{
+                "id": "override-source",
+                "baseline_sha256": "abc",
+                "last_status": "UNCHANGED",
+            }]
+        }),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("WASTE_SOURCE_REGISTRY_PATH", str(registry))
+    assert source_registry_path() == registry
+    assert source_registry()[0]["id"] == "override-source"

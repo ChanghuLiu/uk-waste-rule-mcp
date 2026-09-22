@@ -35,7 +35,7 @@ uk-waste-rule-mcp
 
 ## Evidence boundary
 
-The source registry is in `data/source_registry.json`. Source checks are local-MVP monitoring only; a production deployment still needs durable runtime state, alerting and shared-platform integration.
+The source registry is in `data/source_registry.json`. Runtime resolution prefers an explicit `WASTE_SOURCE_REGISTRY_PATH`, then the repository/container `data/source_registry.json`, then the wheel-installed shared data file. This keeps editable development, Docker deployment and installed-wheel execution on the same reviewed registry without requiring `PYTHONPATH`. Source checks are local-MVP monitoring only; a production deployment still needs durable runtime state, alerting and shared-platform integration.
 
 ## Commercial HTTP/MCP bridge
 
