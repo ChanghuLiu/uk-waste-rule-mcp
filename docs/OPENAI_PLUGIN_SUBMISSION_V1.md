@@ -7,13 +7,13 @@ Date: 2026-09-22
 OpenAI Plugin submission portal / remote MCP review.
 
 - Display name: **RegEvidenceHub Waste**
-- Remote MCP URL: `https://waste-rule-mcp-production.up.railway.app/openai/mcp`
+- Remote MCP URL: `https://waste.regevidencehub.com/openai/mcp`
 - Transport: Streamable HTTP
 - Authentication: none
-- Product page: `https://waste-rule-mcp-production.up.railway.app/waste-rule-preflight`
-- Privacy: `https://waste-rule-mcp-production.up.railway.app/plugin/privacy`
-- Terms: `https://waste-rule-mcp-production.up.railway.app/plugin/terms`
-- Support: `https://waste-rule-mcp-production.up.railway.app/plugin/support`
+- Product page: `https://waste.regevidencehub.com/waste-rule-preflight`
+- Privacy: `https://waste.regevidencehub.com/plugin/privacy`
+- Terms: `https://waste.regevidencehub.com/plugin/terms`
+- Support: `https://waste.regevidencehub.com/plugin/support`
 
 Official review guidance:
 - https://developers.openai.com/plugins/deploy/app-review
