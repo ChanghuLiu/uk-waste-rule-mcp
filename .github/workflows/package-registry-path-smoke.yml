@@ -1,0 +1,73 @@
+name: package-registry-path-smoke
+
+on:
+  push:
+    branches:
+      - fix/package-registry-path
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run repository tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[dev,mcp]'
+          pytest
+
+      - name: Build wheel
+        run: |
+          python -m pip install build
+          python -m build --wheel
+
+      - name: Verify clean wheel install outside repository
+        run: |
+          python -m venv /tmp/waste-wheel-env
+          /tmp/waste-wheel-env/bin/pip install dist/*.whl
+          cd /tmp
+          /tmp/waste-wheel-env/bin/python - <<'PY'
+          from uk_waste_rule_mcp.sources import source_registry, source_registry_path
+
+          path = source_registry_path()
+          records = source_registry()
+          print(f"WHEEL_REGISTRY_PATH={path}")
+          print(f"WHEEL_SOURCE_COUNT={len(records)}")
+          assert "/share/uk-waste-rule-mcp/source_registry.json" in str(path)
+          assert len(records) == 6
+          assert all(item.get("baseline_sha256") for item in records)
+          assert all(item.get("last_status") == "UNCHANGED" for item in records)
+          print("WHEEL_REGISTRY_SMOKE=PASS")
+          PY
+
+      - name: Build deployment image
+        run: docker build -t uk-waste-rule-mcp:registry-fix .
+
+      - name: Verify container without PYTHONPATH workaround
+        run: |
+          docker run --rm --entrypoint python uk-waste-rule-mcp:registry-fix - <<'PY'
+          import os
+          from uk_waste_rule_mcp.production_bridge import service_info
+          from uk_waste_rule_mcp.sources import source_registry, source_registry_path
+
+          print(f"CONTAINER_PYTHONPATH={os.getenv('PYTHONPATH')}")
+          path = source_registry_path()
+          records = source_registry()
+          info = service_info()
+          print(f"CONTAINER_REGISTRY_PATH={path}")
+          print(f"CONTAINER_SOURCE_COUNT={len(records)}")
+          print(f"CONTAINER_SOURCE_STATUS={info['source_health']['status']}")
+          print(f"CONTAINER_PAYMENT_ENFORCED={info['payment_enforced']}")
+          assert os.getenv("PYTHONPATH") in (None, "")
+          assert len(records) == 6
+          assert all(item.get("baseline_sha256") for item in records)
+          assert info["source_health"]["decision_usable"] is True
+          assert info["payment_enforced"] is False
+          print("CONTAINER_REGISTRY_SMOKE=PASS")
+          PY
