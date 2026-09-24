@@ -9,7 +9,7 @@ from typing import Any, Callable
 
 DEFAULT_PUBLIC_MCP_URL = "https://waste.regevidencehub.com/mcp"
 BAZAAR_SERVICE_NAME = "RegEvidenceHub Waste"
-BAZAAR_TAGS = ["waste","environment","england","permit","carrier","compliance"]
+BAZAAR_TAGS = ["waste","england","permit","carrier","compliance"]
 BASE_MAINNET = "eip155:8453"
 
 @dataclass(frozen=True)
