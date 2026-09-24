@@ -147,7 +147,7 @@ def _insert(
         pass
 
 def record_call(tool: str, status: str, latency_ms: float, *, meta: Mapping[str, Any] | None = None, paid: bool = False) -> None:
-    _insert("paid_executed" if paid else "free_business_call", tool=tool, status=status, latency_ms=round(float(latency_ms),2), meta=meta)
+    _insert("business_tool_call" if paid else "free_business_call", tool=tool, status=status, latency_ms=round(float(latency_ms),2), meta=meta)
 
 def record_discovery(route: str, query: str | None = None, *, owned_probe: bool = False, source: str | None = None) -> None:
     if owned_probe:
