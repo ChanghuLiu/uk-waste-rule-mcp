@@ -1,78 +1,102 @@
-# UK Waste Rule & Permit Change-Impact MCP
+# RegEvidenceHub Waste
 
-Local MVP for conservative, official-source-linked screening of waste regulatory routes in England.
+Evidence-linked, deterministic regulatory preflight for England waste workflows. The service is designed for AI agents and workflow automation and fails closed when decisive official evidence is stale, changed, unavailable, unreviewed, conflicting, or required facts are missing.
 
-This is deliberately not waste-management software. It does not create waste-transfer records, plan routes, manage vehicles, submit Digital Waste Tracking data, determine permit eligibility, or approve an operation.
+Production origin: `https://waste.regevidencehub.com`
 
-## Implemented tools
+- Commercial MCP: `https://waste.regevidencehub.com/mcp`
+- Payment-free public AI MCP: `https://waste.regevidencehub.com/ai/mcp`
+- Health: `/health`
+- Status: `/status`
+- Metrics: `/metrics`
+- Agent card: `/.well-known/agent-card.json`
+- MCP discovery: `/.well-known/mcp.json`
+- x402 metadata: `/.well-known/x402`
+- OpenAPI: `/openapi.json`
+- LLM guide: `/llms.txt`
 
-- `waste_rule_preflight`: bounded route and missing-facts preflight.
-- `classify_waste_route_tool`: routes activities to permit/exemption, digital-tracking, duty-of-care or review paths.
-- `permit_change_impact_tool`: compares current and proposed operating facts and reports fields requiring regulatory review.
-- `list_waste_rules_tool`: discovery catalogue.
-- `get_source_registry`: official source metadata.
-- `waste_source_status`: persisted fingerprint/freshness decision gate.
-- `check_waste_sources`: live fetch and fingerprint comparison without changing a reviewed baseline.
-- `get_service_status`: local MVP metadata.
+## Decision workflows
 
-The engine is intentionally fail-closed: unknown roles, unknown activities, unsupported nations and missing facts are surfaced as review or incomplete results. It never infers hazardous status, permit conditions, exemption eligibility, waste codes or quantity thresholds.
+Commercial decision tools:
 
-## Local development
+- `waste_rule_preflight` — general England waste route and missing-facts preflight — **$0.02 USDC**
+- `carrier_broker_dealer_registration_preflight` — carrier/broker/dealer registration, renewal and change lifecycle — **$0.02 USDC**
+- `digital_waste_tracking_receipt_readiness` — phase-1 Digital Waste Tracking readiness for receiving sites — **$0.03 USDC**
+- `permit_change_impact` — current-vs-proposed operational change impact — **$0.03 USDC**
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e '.[dev]'
-pytest
-```
+Free discovery/evidence tools include `waste_rule_info`, `list_waste_rules`, `waste_source_status`, `check_waste_sources` and `get_source_registry`.
 
-To run as an MCP server:
+The separate `/ai/mcp` and `/openai/mcp` public-AI surface is permanently payment-free and read-only. It exposes seven bounded tools: service info, rule catalogue, source status, general preflight, carrier/broker/dealer registration preflight, DWT receipt readiness and permit-change impact.
 
-```bash
-pip install -e '.[mcp]'
-uk-waste-rule-mcp
-```
+## Evidence model
 
-## Evidence boundary
+The checked-in registry contains eight official GOV.UK / Environment Agency sources. Six have reviewed semantic fingerprints from the original MVP; the two new decision-bearing sources are intentionally held behind `MISSING_BASELINE` until a live production fetch is manually reviewed and promoted.
 
-The source registry is in `data/source_registry.json`. Runtime resolution prefers an explicit `WASTE_SOURCE_REGISTRY_PATH`, then the repository/container `data/source_registry.json`, then the wheel-installed shared data file. This keeps editable development, Docker deployment and installed-wheel execution on the same reviewed registry without requiring `PYTHONPATH`. Source checks are local-MVP monitoring only; a production deployment still needs durable runtime state, alerting and shared-platform integration.
+A source is decision-usable only when:
 
-## Commercial HTTP/MCP bridge
+1. a reviewed semantic SHA-256 baseline exists;
+2. the latest observed fingerprint is `UNCHANGED`;
+3. the check is inside its freshness window.
 
-The optional `uk-waste-rule-mcp-http` entry point exposes free discovery and
-source-health endpoints plus the two decision tools. Set
-`WASTE_PAYMENT_ENFORCED=1` only with explicit `WASTE_X402_NETWORK`,
-`WASTE_X402_PAY_TO`, `WASTE_X402_FACILITATOR_URL`, and HTTPS
-`WASTE_PUBLIC_MCP_URL`. The bridge then uses the same x402-v2 MCP/Bazaar
-payment boundary as the RegEvidenceHub vertical services. Install the
-deployment environment's pinned x402 v2 package separately; it is intentionally
-lazy-loaded so local/offline development remains testable.
+`CHANGED`, `FETCH_ERROR`, `MISSING_BASELINE` and stale records fail closed to review.
 
-Prices default to `$0.02` for `waste_rule_preflight` and `$0.03` for
-`permit_change_impact`. Payment is disabled by default. No private key is
-handled by this service.
+The service does **not** infer hazardous status, waste codes, permit conditions, exemption eligibility, regulator approval, or legal advice.
 
-## Container deployment
+## Digital Waste Tracking scope
 
-The `Dockerfile` installs the same pinned x402 v2 package used by the current
-RegEvidenceHub vertical runtime and starts `uk-waste-rule-mcp-http`. The image
-defaults to payment disabled. Only a staging environment with an explicit
-`WASTE_PAYMENT_ENFORCED=1`, `WASTE_X402_NETWORK`, `WASTE_X402_PAY_TO`,
-`WASTE_X402_FACILITATOR_URL`, and HTTPS `WASTE_PUBLIC_MCP_URL` may enable the
-commercial gate. Buyer keys and payment signatures remain client-side.
+The DWT workflow models the current England phase-1 receiving-site requirement and keeps later phases separate. It does not create or submit Digital Waste Tracking records.
+
+## Production operations
+
+The production surface provides a RegEvidenceHub-style operations contract:
+
+- `/health` — serving/source/payment state
+- `/status` — evidence state, prices and 24h metrics
+- `/version` — release/deployment identity
+- `/metrics` — aggregate discovery/tool/payment funnel telemetry
+
+Analytics are privacy-minimal: scenario payloads are not intentionally persisted. Owner/test payment activity is separated from external/unattributed activity.
+
+## Payment
+
+x402 v2 is opt-in through `WASTE_PAYMENT_ENFORCED=1`. Production uses Base USDC when configured. Required settings:
+
+- `WASTE_X402_NETWORK`
+- `WASTE_X402_PAY_TO`
+- `WASTE_X402_FACILITATOR_URL`
+- `WASTE_PUBLIC_MCP_URL`
+
+`WASTE_PAYMENT_MODE=maintenance` is a fail-closed kill switch: paid tools remain discoverable but execute no regulatory decision and request no payment.
+
+No buyer private key or seed phrase is handled by this service.
 
 ## Source monitoring
 
-The checked-in registry contains a semantic visible-text SHA-256 baseline for six official GOV.UK sources. A source is decision-usable only when it has a baseline, the latest observed fingerprint is `UNCHANGED`, and the check is within its freshness window. `CHANGED`, `FETCH_ERROR`, `MISSING_BASELINE`, and stale records fail closed to review.
-
-Refresh observed status without changing reviewed baselines:
+Use the durable registry path in production:
 
 ```bash
+export WASTE_SOURCE_REGISTRY_PATH=/data/waste/source_registry.json
 uk-waste-source-monitor --write
 ```
 
-Establish a baseline only after manually reviewing a completely successful fetch:
+Only after manual review of a completely successful source audit:
 
 ```bash
 uk-waste-source-monitor --establish-baseline
 ```
+
+## Development and CI
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e '.[mcp,dev]' 'x402[evm]==2.21.0'
+python -m compileall -q src
+pytest -q
+```
+
+GitHub CI and the Docker build both run compile + tests before a production image is accepted.
+
+## Boundary
+
+This is regulatory **preflight**, not waste-management execution software. It does not submit carrier registrations, environmental permits, exemptions, DWT records, or regulator filings; it does not approve an operation.
