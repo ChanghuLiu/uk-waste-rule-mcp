@@ -21,7 +21,7 @@ Updated: 2026-09-24
 | --- | --- | --- |
 | Official MCP Registry | DONE | v0.4.1 published and verified from `server.json` |
 | OpenAI Plugins | NEEDS_RESYNC_AND_DEMO | Draft/domain/private MCP app are working; v0.3.0 renamed the public tools, so Scan Tools/test tool names must be refreshed before final Submit; reviewer-accessible demo recording URL is still required |
-| Glama | LISTED_ONLINE_PENDING_CLAIM | Public connector exists, server responds, and 7 tools are visible. HTTP ownership challenge is deployed at `/.well-known/glama.json`; ownership confirmation and post-v0.3.0 TDQS rescore are pending |
+| Glama | DONE | Public connector is live and claimed. Server responds, 7 tools are visible, Admin/Analytics access is active, and TDQS is A / 4.3 as of 2026-09-24. |
 | Smithery | DONE | Listing `liuchanghu2018/uk-waste-rule-mcp` is published. Commercial `/mcp` is healthy with 9 tools. A fresh Smithery release was published on 2026-09-24 after the v0.4.1 schema improvements; do not publish again unless the MCP contract changes. |
 | Grok | DONE | Branded payment-free public-AI MCP connector was added and verified on 2026-09-24 |
 | PayAI | PARTIAL | x402 compatibility and production smoke pass; latest Bazaar watch on 2026-09-24 19:23 UTC returned `indexed=false` |
@@ -52,10 +52,10 @@ v0.4.0 extended the same `waste_*` naming family to the commercial `/mcp` surfac
 - Listing: live
 - Server health shown by Glama: responding
 - Tool count: 7
-- Pre-v0.3.0 TDQS: D / 1.5
-- v0.4.1 retains improved routing descriptions and naming consistency and adds strict shared field-level schemas to target CQC-level agent-selection quality
-- Ownership challenge token is served from `https://waste.regevidencehub.com/.well-known/glama.json`
-- Pending: ownership confirmation and Glama re-score
+- Current TDQS: A / 4.3 (CQC reference: A / 4.2)
+- Tool routing descriptions, naming consistency, and strict field-level schemas now meet the intended CQC-level agent-selection quality target
+- Ownership verified via `https://waste.regevidencehub.com/.well-known/glama.json`
+- Admin and Analytics access are active
 
 ## Smithery current state
 
@@ -68,7 +68,6 @@ v0.4.0 extended the same `waste_*` naming family to the commercial `/mcp` surfac
 
 ## Next controllable work
 
-1. Confirm Glama ownership once its HTTP challenge is checked/rechecked.
-2. Record the refreshed Smithery quality score when Smithery finishes rescoring the latest release.
-3. Re-check PayAI Bazaar indexing after external propagation.
-4. Return to OpenAI: re-scan current 7 public-AI tools, refresh test tool names if needed, attach demo URL, then Submit.
+1. Record the refreshed Smithery quality score after the latest release.
+2. Re-check PayAI Bazaar indexing after external propagation.
+3. Return to OpenAI: re-scan current 7 public-AI tools, refresh test tool names if needed, attach demo URL, then Submit.
