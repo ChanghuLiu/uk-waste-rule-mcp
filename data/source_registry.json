@@ -1,6 +1,6 @@
 {
   "product": "UK Waste Rule & Permit Change-Impact MCP",
-  "scope": "England only in the 0.1 MVP",
+  "scope": "England production evidence registry",
   "sources": [
     {
       "id": "govuk-environmental-permits",
@@ -85,6 +85,38 @@
       "last_error": null,
       "baseline_sha256": "0da18dc40e3d432869b8cf8099f0509399434572c5e62fec5da838947b122d9c",
       "baseline_captured_at": "2026-09-22T00:42:44Z"
+    },
+    {
+      "id": "govuk-cbd-registration",
+      "title": "Register or renew as a waste carrier, broker or dealer",
+      "url": "https://www.gov.uk/register-renew-waste-carrier-broker-dealer-england",
+      "authority": "Environment Agency / GOV.UK",
+      "last_checked": "2026-09-24",
+      "last_checked_at": null,
+      "last_http_status": null,
+      "last_content_type": null,
+      "last_observed_sha256": null,
+      "last_status": "MISSING_BASELINE",
+      "last_error": null,
+      "baseline_sha256": null,
+      "baseline_captured_at": null,
+      "max_age_hours": 48
+    },
+    {
+      "id": "govuk-waste-environmental-permits",
+      "title": "Waste: environmental permits",
+      "url": "https://www.gov.uk/guidance/waste-environmental-permits",
+      "authority": "Environment Agency / GOV.UK",
+      "last_checked": "2026-09-24",
+      "last_checked_at": null,
+      "last_http_status": null,
+      "last_content_type": null,
+      "last_observed_sha256": null,
+      "last_status": "MISSING_BASELINE",
+      "last_error": null,
+      "baseline_sha256": null,
+      "baseline_captured_at": null,
+      "max_age_hours": 48
     }
   ]
 }
