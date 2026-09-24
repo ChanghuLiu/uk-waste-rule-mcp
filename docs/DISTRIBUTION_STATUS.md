@@ -71,3 +71,10 @@ v0.4.0 extended the same `waste_*` naming family to the commercial `/mcp` surfac
 1. Record the refreshed Smithery quality score after the latest release.
 2. Re-check PayAI Bazaar indexing after external propagation.
 3. Return to OpenAI: re-scan current 7 public-AI tools, refresh test tool names if needed, attach demo URL, then Submit.
+
+
+## 2026-09-24 distribution verification evidence
+
+- Smithery: production proxy logs show `SmitheryBot/1.0 (+https://smithery.ai)` POST requests to `/mcp` returning HTTP 200 after publish. Multiple entries in Smithery Recent Releases are release history for the same server, not duplicate public listings.
+- Grok: production proxy logs show `grok-connectors-manager/0.1.0` POST requests to `/ai/mcp` returning HTTP 200/202, and the Grok Plugins UI shows RegEvidenceHub Waste as Added.
+- Glama: `/.well-known/glama.json` now returns HTTP 200 after the ownership challenge deployment. Public connector discovery and seven-tool inspection were already working; final ownership confirmation remains an external UI state.
