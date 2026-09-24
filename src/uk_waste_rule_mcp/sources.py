@@ -82,10 +82,11 @@ def _seed_registry_candidates() -> list[Path]:
 def source_registry_path() -> Path:
     """Resolve durable registry state and seed a new explicit path fail-safely."""
 
-    override = os.getenv("WASTE_SOURCE_REGISTRY_PATH")
+    override = os.getenv("WASTE_SOURCE_REGISTRY_PATH", "").strip()
+    volume = os.getenv("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
     candidates = _seed_registry_candidates()
-    if override:
-        target = Path(override).expanduser()
+    target = Path(override).expanduser() if override else (Path(volume) / "source_registry.json" if volume else None)
+    if target is not None:
         if not target.is_file():
             seed = next((candidate for candidate in candidates if candidate.is_file()), None)
             if seed is not None and seed.resolve() != target.resolve():
@@ -93,7 +94,7 @@ def source_registry_path() -> Path:
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(seed, target)
                 except OSError:
-                    # Leave the missing explicit path visible to source_registry(),
+                    # Leave the missing durable path visible to source_registry(),
                     # which then fails closed rather than silently inventing state.
                     pass
         return target
