@@ -20,11 +20,11 @@ Updated: 2026-09-24
 | Channel | Status | Current gate |
 | --- | --- | --- |
 | Official MCP Registry | DONE | v0.4.1 published and verified from `server.json` |
-| OpenAI Plugins | NEEDS_RESYNC_AND_DEMO | Draft/domain/private MCP app are working; v0.3.0 renamed the public tools, so Scan Tools/test tool names must be refreshed before final Submit; reviewer-accessible demo recording URL is still required |
+| OpenAI Plugins | PORTAL_RESYNC_AND_DEMO | Repo submission packet is fully synced to the current seven `waste_*` public-AI tools; the existing portal draft still needs Scan Tools/test-case refresh, then a reviewer-accessible demo recording URL before final Submit |
 | Glama | DONE | Public connector is live and claimed. Server responds, 7 tools are visible, Admin/Analytics access is active, and TDQS is A / 4.3 as of 2026-09-24. |
 | Smithery | DONE | Listing `liuchanghu2018/uk-waste-rule-mcp` is published. Commercial `/mcp` is healthy with 9 tools. A fresh Smithery release was published on 2026-09-24 after the v0.4.1 schema improvements; do not publish again unless the MCP contract changes. |
 | Grok | DONE | Branded payment-free public-AI MCP connector was added and verified on 2026-09-24 |
-| PayAI | PARTIAL | x402 compatibility and production smoke pass; latest Bazaar watch on 2026-09-24 19:23 UTC returned `indexed=false` |
+| PayAI | EXTERNAL_INDEX_PENDING | x402 compatibility and production smoke pass; latest Bazaar watch on 2026-09-24 19:23 UTC returned `indexed=false` with no Waste tools listed |
 
 ## Public-AI v0.3.0 tools
 
@@ -43,8 +43,9 @@ v0.4.0 extended the same `waste_*` naming family to the commercial `/mcp` surfac
 - Submission packet: 7 tools, 5 positive cases, 3 negative cases
 - Domain verification challenge endpoint: working
 - Private test plugin: working in ChatGPT Work through registered MCP App
-- Public-AI tool contract changed after the draft was first scanned; re-scan the v0.3.0 tools before submission
-- Remaining external blocker after re-scan: reviewer-accessible demo recording URL
+- Repo packet, tool justifications, five positive cases and three negative cases are synced to the current seven-tool public-AI contract
+- Portal draft still needs one Scan Tools/test-name refresh because it was created before the tool rename
+- Remaining submission blocker after portal refresh: reviewer-accessible demo recording URL
 
 ## Glama current state
 
@@ -64,20 +65,20 @@ v0.4.0 extended the same `waste_*` naming family to the commercial `/mcp` surfac
 - MCP Server URL: `https://waste.regevidencehub.com/mcp`
 - Recommended Server ID: `uk-waste-rule-mcp`
 - Repo metadata: `smithery.yaml` committed and CI-validated
-- Listing published at `https://smithery.ai/servers/liuchanghu2018/uk-waste-rule-mcp`; prior quality baseline was 58. A fresh release was published after the v0.4.1 stricter-schema update. Do not publish another release unless the MCP contract changes.
+- Listing published at `https://smithery.ai/servers/liuchanghu2018/uk-waste-rule-mcp`; the UI currently shows Quality Score 58. Multiple Recent Releases are history for this one listing, not duplicate products. Do not publish again unless the MCP contract changes.
 
 ## Next controllable work
 
-1. Record the refreshed Smithery quality score after the latest release.
-2. Re-check PayAI Bazaar indexing after external propagation.
-3. Return to OpenAI: re-scan current 7 public-AI tools, refresh test tool names if needed, attach demo URL, then Submit.
+1. Wait for PayAI Bazaar external indexing; do not self-pay or mutate the product solely to force discovery.
+2. Return to OpenAI portal: re-scan the current 7 public-AI tools and refresh the draft test tool names.
+3. When a reviewer-accessible demo recording URL is available, attach it and Submit.
 
 
 ## 2026-09-24 distribution verification evidence
 
 - Smithery: production proxy logs show `SmitheryBot/1.0 (+https://smithery.ai)` POST requests to `/mcp` returning HTTP 200 after publish. Multiple entries in Smithery Recent Releases are release history for the same server, not duplicate public listings.
 - Grok: production proxy logs show `grok-connectors-manager/0.1.0` POST requests to `/ai/mcp` returning HTTP 200/202, and the Grok Plugins UI shows RegEvidenceHub Waste as Added.
-- Glama: `/.well-known/glama.json` now returns HTTP 200 after the ownership challenge deployment. Public connector discovery and seven-tool inspection were already working; final ownership confirmation remains an external UI state.
+- Glama: `/.well-known/glama.json` returns HTTP 200; ownership is confirmed by full Admin/Analytics/TDQS access. Current TDQS is A-grade with six tools evaluated at an average 4.5/5 and the seventh queued.
 
 
 ## Glama TDQS checkpoint — 2026-09-24
@@ -94,3 +95,16 @@ Ownership is verified and the connector administration pages are available. Curr
 - waste_rule_preflight: queued
 
 No further schema/name churn should be made solely for TDQS until the queued tool is evaluated.
+
+
+## External discovery traffic checkpoint — 2026-09-24
+
+Production proxy logs show genuine third-party/indexer activity beyond owner tests:
+
+- SmitheryBot hit commercial `/mcp` repeatedly with HTTP 200.
+- `grok-connectors-manager/0.1.0` hit `/ai/mcp` with successful MCP 200/202 responses.
+- Glama ownership challenge requests hit `/.well-known/glama.json` with HTTP 200.
+- Additional discovery traffic reached the public-AI MCP from MCPHub, Talandor, Golemreach and research probes.
+- PayAI facilitator support checks return HTTP 200, but Bazaar discovery still did not list the Waste endpoint at the latest 19:23 UTC watch.
+
+Interpretation: distribution discovery is active; these machine/indexer hits are not counted as paying customers or revenue.
