@@ -24,7 +24,9 @@ def base_scenario(**overrides):
     return value
 
 
-def test_receiver_routes_to_permit_and_digital_tracking_review():
+def test_receiver_routes_to_permit_and_digital_tracking_review(monkeypatch):
+    import uk_waste_rule_mcp.engine as engine
+    monkeypatch.setattr(engine, "_source_gate", lambda _ids: {"decision_usable": True})
     result = waste_preflight(base_scenario())
     assert result["decision"]["route"] == "PERMIT_OR_EXEMPTION_AND_DIGITAL_TRACKING_REVIEW"
     assert result["decision"]["status"] == "SCREENING_COMPLETE_REVIEW_REQUIRED"
@@ -135,7 +137,7 @@ def test_commercial_bridge_defaults_to_free_discovery_and_fail_closed():
 def test_x402_gate_rejects_missing_configuration_before_importing_provider(monkeypatch):
     for key in ("WASTE_X402_NETWORK", "WASTE_X402_PAY_TO", "WASTE_X402_FACILITATOR_URL", "WASTE_PUBLIC_MCP_URL"):
         monkeypatch.delenv(key, raising=False)
-    with pytest.raises(RuntimeError, match="WASTE_X402_NETWORK is required"):
+    with pytest.raises(RuntimeError, match="WASTE_X402_PAY_TO is required"):
         MCP2X402Gate()
 
 
