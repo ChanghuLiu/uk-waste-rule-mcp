@@ -8,7 +8,7 @@ from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
 from . import __version__
-from .engine import PRODUCT, list_waste_rules as catalogue, permit_change_impact as impact, waste_preflight
+from .engine import (\n    PRODUCT, carrier_broker_dealer_registration_preflight, digital_waste_tracking_receipt_readiness,\n    list_waste_rules as catalogue, permit_change_impact as impact, waste_preflight,\n)
 from .monitor import source_health
 
 
