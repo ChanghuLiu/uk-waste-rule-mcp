@@ -1,0 +1,44 @@
+name: PayAI Bazaar indexing watch
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - src/uk_waste_rule_mcp/x402_mcp2.py
+      - .github/workflows/payai-bazaar-watch.yml
+permissions:
+  contents: read
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Bazaar
+        run: |
+          python - <<'PY'
+          import json, urllib.parse, urllib.request
+          endpoint='https://waste.regevidencehub.com/mcp'
+          tool='waste_rule_preflight'
+          pay_to='0xDAAef0FD525278aAD0bA11066A96c338642A3d1A'
+          url='https://facilitator.payai.network/discovery/resources?'+urllib.parse.urlencode({'type':'mcp','payTo':pay_to,'limit':200})
+          req=urllib.request.Request(url,headers={'Accept':'application/json','User-Agent':'RegEvidenceHubWaste-bazaar-watch/1.0'})
+          with urllib.request.urlopen(req,timeout=30) as r: data=json.load(r)
+          items=data.get('items') or data.get('resources') or []
+          tools=[]
+          for item in items:
+              if not isinstance(item,dict): continue
+              resource=item.get('resource')
+              if isinstance(resource,dict): resource=resource.get('url')
+              if str(resource or '').rstrip('/') != endpoint.rstrip('/'): continue
+              info=(((item.get('extensions') or {}).get('bazaar') or {}).get('info') or {})
+              inp=info.get('input') or {}
+              name=inp.get('toolName')
+              if isinstance(name,str) and name: tools.append(name)
+          report={'indexed':tool in tools,'tool_names':sorted(set(tools)),'endpoint':endpoint}
+          open('/tmp/payai-bazaar-watch.json','w').write(json.dumps(report,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(report,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waste-payai-bazaar-watch
+          path: /tmp/payai-bazaar-watch.json
+          retention-days: 14

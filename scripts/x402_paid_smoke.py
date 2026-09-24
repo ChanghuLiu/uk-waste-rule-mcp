@@ -25,7 +25,7 @@ from x402.mechanisms.evm.exact.register import register_exact_evm_client
 
 ENDPOINT = os.getenv(
     "WASTE_PAID_MCP_URL",
-    "https://waste-rule-mcp-production.up.railway.app/mcp",
+    "https://waste.regevidencehub.com/mcp",
 )
 TOOL = "waste_rule_preflight"
 NETWORK = "eip155:8453"

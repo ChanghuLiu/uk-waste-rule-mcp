@@ -1,0 +1,26 @@
+name: PayAI x402 compatibility
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/payai_compatibility.py
+      - src/uk_waste_rule_mcp/x402_mcp2.py
+      - .github/workflows/payai-compatibility.yml
+permissions:
+  contents: read
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install --upgrade pip && pip install -e '.[mcp]' 'x402[evm]==2.21.0'
+      - run: python scripts/payai_compatibility.py
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waste-payai-compatibility
+          path: /tmp/payai-compatibility.json
+          retention-days: 14

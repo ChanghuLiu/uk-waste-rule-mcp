@@ -1,0 +1,48 @@
+name: PayAI production x402 smoke
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/x402_paid_smoke.py
+      - src/uk_waste_rule_mcp/x402_mcp2.py
+      - .github/workflows/payai-production-smoke.yml
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install --upgrade pip && pip install -e '.[mcp]' 'x402[evm]==2.21.0'
+      - name: Verify branded production unpaid challenge
+        env:
+          WASTE_PAID_MCP_URL: https://waste.regevidencehub.com/mcp
+        run: python scripts/x402_paid_smoke.py --probe
+      - name: Verify Bazaar endpoint responds
+        run: |
+          python - <<'PY'
+          import json, urllib.request
+          url='https://facilitator.payai.network/discovery/resources?type=mcp&limit=100'
+          with urllib.request.urlopen(url,timeout=30) as r: data=json.load(r)
+          endpoint='https://waste.regevidencehub.com/mcp'
+          items=data.get('items') or data.get('resources') or []
+          matches=[]
+          for x in items:
+              if not isinstance(x,dict): continue
+              resource=x.get('resource')
+              if isinstance(resource,dict): resource=resource.get('url')
+              if str(resource or '').rstrip('/')==endpoint.rstrip('/'): matches.append(x)
+          report={'production_mcp':'PASS','payment_enforced':True,'network':'eip155:8453','unpaid_business_handler_blocked':True,'payai_bazaar_reachable':True,'payai_bazaar_endpoint_present':bool(matches),'payai_bazaar_match_count':len(matches)}
+          open('/tmp/payai-production-smoke.json','w').write(json.dumps(report,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(report,sort_keys=True))
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waste-payai-production-smoke
+          path: /tmp/payai-production-smoke.json
+          retention-days: 14

@@ -1,0 +1,23 @@
+name: Publish MCP Registry
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [server.json, .github/workflows/publish-mcp-registry.yml]
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install pinned MCP publisher
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz" -o /tmp/mcp-publisher.tar.gz
+          echo "a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc  /tmp/mcp-publisher.tar.gz" | sha256sum --check --strict
+          tar -xzf /tmp/mcp-publisher.tar.gz -C /tmp mcp-publisher
+          chmod +x /tmp/mcp-publisher
+      - run: /tmp/mcp-publisher login github-oidc
+      - run: /tmp/mcp-publisher publish ./server.json

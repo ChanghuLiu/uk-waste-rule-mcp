@@ -1,0 +1,30 @@
+name: Verify MCP Registry listing
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [server.json, .github/workflows/verify-mcp-registry.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Verify listing
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            curl --fail --silent --show-error --get --data-urlencode "search=io.github.ChanghuLiu/uk-waste-rule-mcp" https://registry.modelcontextprotocol.io/v0.1/servers -o /tmp/registry.json || true
+            if python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path('/tmp/registry.json').read_text()) if Path('/tmp/registry.json').exists() else {}
+          ok=any((x.get('server',x).get('name')=='io.github.ChanghuLiu/uk-waste-rule-mcp' and x.get('server',x).get('version')=='0.2.0') for x in p.get('servers',[]))
+          print('MCP_REGISTRY_VERIFY=' + ('PASS' if ok else 'PENDING'))
+          raise SystemExit(0 if ok else 1)
+          PY
+            then exit 0; fi
+            sleep 10
+          done
+          exit 1
