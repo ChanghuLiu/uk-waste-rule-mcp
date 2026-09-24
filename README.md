@@ -2,10 +2,10 @@
 
 Evidence-linked, deterministic regulatory preflight for England waste workflows. The service is designed for AI agents and workflow automation and fails closed when decisive official evidence is stale, changed, unavailable, unreviewed, conflicting, or required facts are missing.
 
-Production origin: `https://waste-rule-mcp-production-c008.up.railway.app`
+Production origin: `https://waste.regevidencehub.com`
 
-- Commercial MCP: `https://waste-rule-mcp-production-c008.up.railway.app/mcp`
-- Payment-free public AI MCP: `https://waste-rule-mcp-production-c008.up.railway.app/ai/mcp`
+- Commercial MCP: `https://waste.regevidencehub.com/mcp`
+- Payment-free public AI MCP: `https://waste.regevidencehub.com/ai/mcp`
 - Health: `/health`
 - Status: `/status`
 - Metrics: `/metrics`
