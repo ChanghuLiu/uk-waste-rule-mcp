@@ -33,12 +33,12 @@ ACTIVITIES: dict[str, dict[str, Any]] = {
     "transport_waste": {
         "label": "Transport waste",
         "route": "CARRIER_REGISTRATION_AND_DUTY_OF_CARE_REVIEW",
-        "source_ids": ["govuk-waste-duty-of-care"],
+        "source_ids": ["govuk-cbd-registration", "govuk-waste-duty-of-care"],
     },
     "arrange_waste": {
         "label": "Arrange transport or disposal of waste",
         "route": "BROKER_OR_DEALER_AND_DUTY_OF_CARE_REVIEW",
-        "source_ids": ["govuk-waste-duty-of-care"],
+        "source_ids": ["govuk-cbd-registration", "govuk-waste-duty-of-care"],
     },
     "receive_waste": {
         "label": "Receive waste at a site",
@@ -56,6 +56,9 @@ ACTIVITIES: dict[str, dict[str, Any]] = {
         "source_ids": ["govuk-environmental-permits", "govuk-waste-exemptions"],
     },
 }
+
+CBD_ROLES = {"carrier", "broker", "dealer"}
+DWT_MANDATORY_ENGLAND = date(2026, 10, 1)
 
 
 def _norm(value: Any) -> str:
@@ -254,5 +257,258 @@ def waste_preflight(scenario: dict[str, Any]) -> dict[str, Any]:
         "limitations": [
             "This MVP does not submit Digital Waste Tracking data or replace operational waste-management software.",
             "No hazardous-waste, POPs, EWC-code, quantity-threshold or permit-condition conclusion is inferred from incomplete facts.",
+        ],
+    }
+
+
+def carrier_broker_dealer_registration_preflight(scenario: dict[str, Any]) -> dict[str, Any]:
+    """Preflight England waste carrier/broker/dealer registration and lifecycle actions.
+
+    This deliberately does not infer registration tier from an incomplete fact pattern.
+    """
+    if not isinstance(scenario, dict):
+        raise TypeError("scenario must be an object")
+
+    source_ids = {"govuk-cbd-registration", "govuk-waste-duty-of-care"}
+    gate = _source_gate(source_ids)
+    findings: list[dict[str, Any]] = []
+    nation = _norm(scenario.get("nation"))
+    role = _norm(scenario.get("role"))
+    action = _norm(scenario.get("action") or "new_registration")
+    own_waste_only = scenario.get("own_waste_only")
+    construction_demolition = scenario.get("construction_demolition_waste")
+    existing_tier = _norm(scenario.get("existing_registration_tier"))
+
+    if not gate["decision_usable"]:
+        findings.append(_finding(
+            "SOURCE-001", "blocking", "review_required",
+            "One or more official carrier/broker/dealer sources are stale, changed, unavailable or unreviewed; the decision is withheld.",
+            sorted(source_ids),
+        ))
+
+    if not nation:
+        findings.append(_finding("SCOPE-001", "blocking", "missing", "The UK nation is required.", ["govuk-cbd-registration"]))
+    elif nation != "england":
+        findings.append(_finding("SCOPE-001", "blocking", "review_required", "This workflow currently covers England only.", ["govuk-cbd-registration"]))
+
+    if not role:
+        findings.append(_finding("CBD-ROLE-001", "blocking", "missing", "Specify carrier, broker or dealer.", ["govuk-cbd-registration"]))
+    elif role not in CBD_ROLES:
+        findings.append(_finding("CBD-ROLE-002", "blocking", "unknown", "This workflow is only for carrier, broker or dealer registration.", ["govuk-cbd-registration"]))
+
+    registration_required: bool | None = None
+    price_route = "REVIEW_REQUIRED"
+    if role in CBD_ROLES and nation == "england":
+        registration_required = True
+        findings.append(_finding(
+            "CBD-REG-001", "info", "required",
+            "Businesses that transport waste, deal in waste, or broker waste movements must use the carrier/broker/dealer registration route in England.",
+            ["govuk-cbd-registration"],
+        ))
+        if role == "carrier":
+            if own_waste_only is None:
+                findings.append(_finding(
+                    "CBD-FACT-001", "blocking", "missing",
+                    "State whether the carrier transports only waste it produces itself; this affects the current fee/tier route.",
+                    ["govuk-cbd-registration"],
+                ))
+            elif bool(own_waste_only):
+                if construction_demolition is None:
+                    findings.append(_finding(
+                        "CBD-FACT-002", "blocking", "missing",
+                        "For an own-waste carrier, state whether construction or demolition waste is carried.",
+                        ["govuk-cbd-registration"],
+                    ))
+                elif bool(construction_demolition):
+                    price_route = "STANDARD_REGISTRATION_FEE_ROUTE"
+                else:
+                    price_route = "OWN_WASTE_USUALLY_FREE_ROUTE"
+            else:
+                price_route = "STANDARD_REGISTRATION_FEE_ROUTE"
+        else:
+            price_route = "STANDARD_REGISTRATION_FEE_ROUTE"
+
+    lifecycle = {
+        "new_registration": "NEW_REGISTRATION",
+        "renew": "RENEWAL",
+        "change_details": "UPDATE_WITHIN_28_DAYS",
+        "change_activity": "ACTIVITY_CHANGE",
+        "change_legal_type": "NEW_REGISTRATION_REQUIRED",
+        "lower_to_upper": "NEW_REGISTRATION_REQUIRED",
+    }.get(action, "UNKNOWN_ACTION")
+
+    if lifecycle == "UNKNOWN_ACTION":
+        findings.append(_finding(
+            "CBD-ACTION-001", "blocking", "unknown",
+            "Supported actions are new_registration, renew, change_details, change_activity, change_legal_type and lower_to_upper.",
+            ["govuk-cbd-registration"],
+        ))
+    elif action == "renew" and existing_tier:
+        if existing_tier == "upper":
+            findings.append(_finding(
+                "CBD-RENEW-001", "info", "required",
+                "Upper-tier registrations are renewed every 3 years.",
+                ["govuk-cbd-registration"],
+            ))
+        elif existing_tier == "lower":
+            findings.append(_finding(
+                "CBD-RENEW-002", "info", "not_required",
+                "The current GOV.UK registration page says lower-tier registration does not require renewal.",
+                ["govuk-cbd-registration"],
+            ))
+        else:
+            findings.append(_finding("CBD-TIER-001", "blocking", "unknown", "Unknown registration tier.", ["govuk-cbd-registration"]))
+    elif action == "renew" and not existing_tier:
+        findings.append(_finding("CBD-TIER-002", "blocking", "missing", "Provide existing_registration_tier for a renewal decision.", ["govuk-cbd-registration"]))
+
+    blocking = [
+        item for item in findings
+        if item["severity"] == "blocking" and item["status"] in {"missing", "unknown"}
+    ]
+    if blocking:
+        status = "INCOMPLETE"
+    elif not gate["decision_usable"] or nation != "england":
+        status = "REVIEW_REQUIRED"
+    else:
+        status = "SCREENING_COMPLETE"
+
+    return {
+        "product": PRODUCT,
+        "schema_version": "0.2",
+        "generated_on": date.today().isoformat(),
+        "decision": {
+            "route": "CARRIER_BROKER_DEALER_REGISTRATION",
+            "status": status,
+            "deterministic": True,
+            "registration_required": registration_required,
+            "role": role or None,
+            "action": lifecycle,
+            "fee_route": price_route,
+        },
+        "current_published_fees_gbp": {
+            "standard_registration": 191.02,
+            "upper_tier_renewal": 130.25,
+            "change_activity": 49.62,
+            "note": "Fee values are returned only with the current reviewed official source and must not be cached as permanent statutory amounts.",
+        } if gate["decision_usable"] else None,
+        "findings": findings,
+        "source_health": gate,
+        "evidence": _source_subset(source_ids),
+        "next_actions": [
+            "Use the Environment Agency registration service for the applicable carrier, broker or dealer lifecycle action.",
+            "Confirm the registration tier shown by the official service; this preflight does not independently assign legal tier status.",
+        ],
+        "limitations": [
+            "This service does not submit or renew a registration.",
+            "It does not determine environmental-offence eligibility or replace an Environment Agency decision.",
+        ],
+    }
+
+
+def digital_waste_tracking_receipt_readiness(scenario: dict[str, Any]) -> dict[str, Any]:
+    """Check phase-1 Digital Waste Tracking readiness for England receiving sites."""
+    if not isinstance(scenario, dict):
+        raise TypeError("scenario must be an object")
+
+    source_ids = {"govuk-digital-waste-tracking-service", "govuk-report-receipt-of-waste"}
+    gate = _source_gate(source_ids)
+    findings: list[dict[str, Any]] = []
+    nation = _norm(scenario.get("nation"))
+    authorisation = _norm(scenario.get("receiving_authorisation"))
+    receives_controlled = scenario.get("receives_controlled_waste")
+    reporting_ready = scenario.get("reporting_method_ready")
+
+    raw_as_of = scenario.get("as_of_date")
+    if raw_as_of:
+        try:
+            as_of = date.fromisoformat(str(raw_as_of))
+        except ValueError:
+            as_of = date.today()
+            findings.append(_finding("DWT-DATE-001", "blocking", "unknown", "as_of_date must use YYYY-MM-DD.", sorted(source_ids)))
+    else:
+        as_of = date.today()
+
+    if not gate["decision_usable"]:
+        findings.append(_finding(
+            "SOURCE-001", "blocking", "review_required",
+            "Digital Waste Tracking evidence is stale, changed, unavailable or unreviewed; the readiness decision is withheld.",
+            sorted(source_ids),
+        ))
+    if not nation:
+        findings.append(_finding("SCOPE-001", "blocking", "missing", "The UK nation is required.", sorted(source_ids)))
+    elif nation != "england":
+        findings.append(_finding("SCOPE-001", "blocking", "review_required", "This workflow currently models England phase-1 timing only.", sorted(source_ids)))
+
+    phase1_in_scope: bool | None = None
+    requirement = "REVIEW_REQUIRED"
+    if nation == "england":
+        if receives_controlled is None:
+            findings.append(_finding("DWT-FACT-001", "blocking", "missing", "State whether the site receives controlled waste.", sorted(source_ids)))
+        elif not bool(receives_controlled):
+            phase1_in_scope = False
+            requirement = "NO_CONTROLLED_WASTE_RECEIPT_IDENTIFIED"
+        elif not authorisation:
+            findings.append(_finding("DWT-FACT-002", "blocking", "missing", "State the receiving-site authorisation: permit, licence, exemption or other.", sorted(source_ids)))
+        elif authorisation in {"permit", "permitted", "licence", "licensed"}:
+            phase1_in_scope = True
+            requirement = "MANDATORY" if as_of >= DWT_MANDATORY_ENGLAND else "PREPARE_FOR_MANDATORY_START"
+            findings.append(_finding(
+                "DWT-SCOPE-001", "info", "required" if as_of >= DWT_MANDATORY_ENGLAND else "upcoming",
+                "England permitted or licensed waste receiving sites are in phase 1 of mandatory Digital Waste Tracking from 1 October 2026.",
+                sorted(source_ids),
+            ))
+            if reporting_ready is not True:
+                findings.append(_finding(
+                    "DWT-READY-001", "blocking", "missing" if reporting_ready is None else "not_confirmed",
+                    "Confirm a reporting route is operational before the mandatory start or before relying on this readiness result.",
+                    sorted(source_ids),
+                ))
+        elif authorisation in {"exemption", "registered_exemption"}:
+            phase1_in_scope = False
+            requirement = "NOT_INCLUDED_IN_PHASE_1_CURRENT_MODEL"
+            findings.append(_finding(
+                "DWT-SCOPE-002", "warning", "review_required",
+                "Current GOV.UK phase-1 guidance distinguishes permitted/licensed receiving sites from registered exemptions; keep later-phase changes under review.",
+                ["govuk-digital-waste-tracking-service"],
+            ))
+        else:
+            findings.append(_finding("DWT-AUTH-001", "blocking", "unknown", "Unsupported receiving authorisation value.", sorted(source_ids)))
+
+    blocking = [
+        item for item in findings
+        if item["severity"] == "blocking" and item["status"] in {"missing", "unknown", "not_confirmed"}
+    ]
+    if blocking:
+        status = "INCOMPLETE"
+    elif not gate["decision_usable"] or nation != "england":
+        status = "REVIEW_REQUIRED"
+    else:
+        status = "SCREENING_COMPLETE"
+
+    return {
+        "product": PRODUCT,
+        "schema_version": "0.2",
+        "generated_on": date.today().isoformat(),
+        "decision": {
+            "route": "DIGITAL_WASTE_TRACKING_RECEIPT_READINESS",
+            "status": status,
+            "deterministic": True,
+            "phase1_in_scope": phase1_in_scope,
+            "requirement": requirement,
+            "mandatory_from": DWT_MANDATORY_ENGLAND.isoformat(),
+            "as_of_date": as_of.isoformat(),
+            "reporting_timing": "Report each received load within 2 working days, starting the day after receipt, when the mandatory receiving-site rule applies.",
+        },
+        "findings": findings,
+        "source_health": gate,
+        "evidence": _source_subset(source_ids),
+        "next_actions": [
+            "Confirm the receiving-site authorisation and whether controlled waste is received.",
+            "Prepare either the receipt-of-waste API or the supported spreadsheet route before the mandatory date if the site is in scope.",
+            "Continue monitoring later Digital Waste Tracking phases for exemptions and collectors.",
+        ],
+        "limitations": [
+            "This workflow does not submit Digital Waste Tracking records.",
+            "It does not classify waste, generate waste codes or calculate permit conditions.",
         ],
     }

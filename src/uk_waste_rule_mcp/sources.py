@@ -11,6 +11,20 @@ from typing import Any
 
 SOURCES: list[dict[str, Any]] = [
     {
+        "id": "govuk-cbd-registration",
+        "title": "Register or renew as a waste carrier, broker or dealer",
+        "url": "https://www.gov.uk/register-renew-waste-carrier-broker-dealer-england",
+        "authority": "Environment Agency / GOV.UK",
+        "last_checked": "2026-09-24",
+    },
+    {
+        "id": "govuk-waste-environmental-permits",
+        "title": "Waste: environmental permits",
+        "url": "https://www.gov.uk/guidance/waste-environmental-permits",
+        "authority": "Environment Agency / GOV.UK",
+        "last_checked": "2026-09-24",
+    },
+    {
         "id": "govuk-environmental-permits",
         "title": "Check if you need an environmental permit",
         "url": "https://www.gov.uk/guidance/check-if-you-need-an-environmental-permit",

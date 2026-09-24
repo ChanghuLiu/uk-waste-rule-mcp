@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from uk_waste_rule_mcp.engine import classify_waste_route, list_waste_rules, permit_change_impact, waste_preflight
+from uk_waste_rule_mcp.engine import (carrier_broker_dealer_registration_preflight, classify_waste_route, digital_waste_tracking_receipt_readiness, list_waste_rules, permit_change_impact, waste_preflight)
 from uk_waste_rule_mcp.monitor import normalise_visible_text, semantic_sha256, source_health
 from uk_waste_rule_mcp.production_bridge import PRICES, service_info
 from uk_waste_rule_mcp.sources import source_registry, source_registry_path
@@ -24,7 +24,9 @@ def base_scenario(**overrides):
     return value
 
 
-def test_receiver_routes_to_permit_and_digital_tracking_review():
+def test_receiver_routes_to_permit_and_digital_tracking_review(monkeypatch):
+    import uk_waste_rule_mcp.engine as engine
+    monkeypatch.setattr(engine, "_source_gate", lambda _ids: {"decision_usable": True})
     result = waste_preflight(base_scenario())
     assert result["decision"]["route"] == "PERMIT_OR_EXEMPTION_AND_DIGITAL_TRACKING_REVIEW"
     assert result["decision"]["status"] == "SCREENING_COMPLETE_REVIEW_REQUIRED"
@@ -73,7 +75,8 @@ def test_carrier_has_duty_of_care_review():
         "hazardous_status": False,
     })
     assert any(item["code"] == "DUTY-001" for item in result["findings"])
-    assert result["decision"]["status"] == "SCREENING_COMPLETE_REVIEW_REQUIRED"
+    assert result["decision"]["status"] == "REVIEW_REQUIRED"
+    assert any(item["code"] == "SOURCE-001" for item in result["findings"])
 
 
 def test_change_impact_requires_current_and_proposed_facts():
@@ -134,15 +137,17 @@ def test_commercial_bridge_defaults_to_free_discovery_and_fail_closed():
 def test_x402_gate_rejects_missing_configuration_before_importing_provider(monkeypatch):
     for key in ("WASTE_X402_NETWORK", "WASTE_X402_PAY_TO", "WASTE_X402_FACILITATOR_URL", "WASTE_PUBLIC_MCP_URL"):
         monkeypatch.delenv(key, raising=False)
-    with pytest.raises(RuntimeError, match="WASTE_X402_NETWORK is required"):
+    with pytest.raises(RuntimeError, match="WASTE_X402_PAY_TO is required"):
         MCP2X402Gate()
 
 
 def test_source_registry_contains_reviewed_baselines():
     records = source_registry()
-    assert len(records) == 6
-    assert all(record.get("baseline_sha256") for record in records)
-    assert all(record.get("last_status") == "UNCHANGED" for record in records)
+    assert len(records) == 8
+    reviewed = [record for record in records if record.get("baseline_sha256")]
+    pending = [record for record in records if not record.get("baseline_sha256")]
+    assert len(reviewed) == 6
+    assert {record["id"] for record in pending} == {"govuk-cbd-registration", "govuk-waste-environmental-permits"}
 
 
 def test_source_registry_path_honours_explicit_override(monkeypatch, tmp_path):
@@ -160,3 +165,53 @@ def test_source_registry_path_honours_explicit_override(monkeypatch, tmp_path):
     monkeypatch.setenv("WASTE_SOURCE_REGISTRY_PATH", str(registry))
     assert source_registry_path() == registry
     assert source_registry()[0]["id"] == "override-source"
+
+
+def test_cbd_registration_preflight_requires_carrier_own_waste_fact():
+    result = carrier_broker_dealer_registration_preflight({
+        "nation": "England", "role": "carrier", "action": "new_registration"
+    })
+    assert result["decision"]["registration_required"] is True
+    assert any(item["code"] == "CBD-FACT-001" for item in result["findings"])
+
+
+def test_cbd_broker_routes_to_standard_registration_fee_when_source_reviewed(monkeypatch):
+    import uk_waste_rule_mcp.engine as engine
+    monkeypatch.setattr(engine, "_source_gate", lambda _ids: {"decision_usable": True})
+    monkeypatch.setattr(engine, "_source_subset", lambda _ids: [])
+    result = engine.carrier_broker_dealer_registration_preflight({
+        "nation": "England", "role": "broker", "action": "new_registration"
+    })
+    assert result["decision"]["status"] == "SCREENING_COMPLETE"
+    assert result["decision"]["fee_route"] == "STANDARD_REGISTRATION_FEE_ROUTE"
+    assert result["current_published_fees_gbp"]["standard_registration"] == 191.02
+
+
+def test_dwt_permitted_receiving_site_is_mandatory_from_october_2026(monkeypatch):
+    import uk_waste_rule_mcp.engine as engine
+    monkeypatch.setattr(engine, "_source_gate", lambda _ids: {"decision_usable": True})
+    monkeypatch.setattr(engine, "_source_subset", lambda _ids: [])
+    result = engine.digital_waste_tracking_receipt_readiness({
+        "nation": "England",
+        "receiving_authorisation": "permit",
+        "receives_controlled_waste": True,
+        "reporting_method_ready": True,
+        "as_of_date": "2026-10-01",
+    })
+    assert result["decision"]["phase1_in_scope"] is True
+    assert result["decision"]["requirement"] == "MANDATORY"
+    assert result["decision"]["status"] == "SCREENING_COMPLETE"
+
+
+def test_dwt_exemption_is_not_claimed_as_phase1_mandatory(monkeypatch):
+    import uk_waste_rule_mcp.engine as engine
+    monkeypatch.setattr(engine, "_source_gate", lambda _ids: {"decision_usable": True})
+    monkeypatch.setattr(engine, "_source_subset", lambda _ids: [])
+    result = engine.digital_waste_tracking_receipt_readiness({
+        "nation": "England",
+        "receiving_authorisation": "exemption",
+        "receives_controlled_waste": True,
+        "as_of_date": "2026-10-01",
+    })
+    assert result["decision"]["phase1_in_scope"] is False
+    assert result["decision"]["requirement"] == "NOT_INCLUDED_IN_PHASE_1_CURRENT_MODEL"

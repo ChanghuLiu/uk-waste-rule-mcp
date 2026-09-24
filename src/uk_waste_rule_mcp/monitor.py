@@ -161,6 +161,7 @@ def write_registry(path: str | Path, sources: list[dict[str, Any]]) -> None:
     """Atomically write monitoring records to the checked-in registry."""
 
     target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
     payload = {"product": "UK Waste Rule & Permit Change-Impact MCP", "scope": "England only in the 0.1 MVP", "sources": sources}
     temporary = target.with_suffix(target.suffix + ".tmp")
     temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -179,8 +180,7 @@ def main() -> None:
             raise SystemExit("Refusing to establish baseline: one or more source fetches did not succeed.")
         checked = establish_baselines(checked)
     if args.write or args.establish_baseline:
-        registry_path = Path(__file__).resolve().parents[2] / "data" / "source_registry.json"
-        write_registry(registry_path, checked)
+        write_registry(source_registry_path(), checked)
     print(json.dumps(source_health(checked), indent=2, ensure_ascii=False))
 
 
