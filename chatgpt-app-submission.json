@@ -3,7 +3,7 @@
   "schema_version": 1,
   "app_info": {
     "display_name": "RegEvidenceHub Waste",
-    "subtitle": "England waste compliance preflight",
+    "subtitle": "England waste compliance",
     "description": "RegEvidenceHub Waste helps users navigate England waste regulatory workflows using bounded, evidence-linked preflight tools. It can route current waste operations, check carrier/broker/dealer registration lifecycle questions, assess Digital Waste Tracking receiving-site readiness, screen proposed permit-impact changes, and report official-source health. It uses user-supplied facts, fails closed when decisive evidence is stale or incomplete, does not submit anything to the Environment Agency, and does not provide regulator approval or legal advice.",
     "category": "BUSINESS"
   },
