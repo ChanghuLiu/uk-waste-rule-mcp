@@ -1,0 +1,22 @@
+name: Waste Custom Domain Smoke
+
+on:
+  push:
+    branches: ["ops/custom-domain-smoke-20260924"]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: DNS
+        run: |
+          getent ahosts waste.regevidencehub.com || true
+          getent ahosts waste-rule-mcp-production.up.railway.app || true
+      - name: Railway native health
+        run: curl --fail --show-error --silent --max-time 20 --dump-header - https://waste-rule-mcp-production.up.railway.app/health
+      - name: Custom domain TLS and health
+        run: curl --fail --show-error --silent --max-time 20 --dump-header - https://waste.regevidencehub.com/health
