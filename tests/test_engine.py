@@ -73,7 +73,8 @@ def test_carrier_has_duty_of_care_review():
         "hazardous_status": False,
     })
     assert any(item["code"] == "DUTY-001" for item in result["findings"])
-    assert result["decision"]["status"] == "SCREENING_COMPLETE_REVIEW_REQUIRED"
+    assert result["decision"]["status"] == "REVIEW_REQUIRED"
+    assert any(item["code"] == "SOURCE-001" for item in result["findings"])
 
 
 def test_change_impact_requires_current_and_proposed_facts():
