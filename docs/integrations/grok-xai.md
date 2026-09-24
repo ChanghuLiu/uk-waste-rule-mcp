@@ -4,7 +4,7 @@ Date: 2026-09-22
 
 Use the permanent payment-free vendor-neutral endpoint:
 
-- MCP URL: `https://waste-rule-mcp-production.up.railway.app/ai/mcp`
+- MCP URL: `https://waste-rule-mcp-production-c008.up.railway.app/ai/mcp`
 - Connector name: **RegEvidenceHub Waste**
 - Description: Evidence-linked England waste-rule and permit-change preflight.
 - Authentication: none
