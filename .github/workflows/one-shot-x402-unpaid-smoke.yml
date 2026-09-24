@@ -58,7 +58,7 @@ jobs:
 
                       paid = await session.call_tool(
                           "waste_rule_preflight",
-                          arguments={
+                          arguments={"scenario":{
                               "nation":"England",
                               "role":"receiver",
                               "activities":["receive_waste"],
@@ -66,7 +66,7 @@ jobs:
                               "waste_types":["non_hazardous_general"],
                               "hazardous_status":False,
                               "authorisation_status":"permit",
-                          },
+                          }},
                       )
                       paid_dump = dump(paid)
                       print("PAID_UNPAID_RESULT=", json.dumps(paid_dump, default=str)[:8000])
