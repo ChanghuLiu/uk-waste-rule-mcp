@@ -3,6 +3,7 @@ import json
 
 import pytest
 
+from uk_waste_rule_mcp.analytics import _db_path
 from uk_waste_rule_mcp.engine import (carrier_broker_dealer_registration_preflight, classify_waste_route, digital_waste_tracking_receipt_readiness, list_waste_rules, permit_change_impact, waste_preflight)
 from uk_waste_rule_mcp.monitor import normalise_visible_text, semantic_sha256, source_health
 from uk_waste_rule_mcp.production_bridge import PRICES, service_info
@@ -149,6 +150,16 @@ def test_source_registry_contains_reviewed_baselines():
     assert len(reviewed) == 8
     assert pending == []
     assert all(record.get("last_status") == "UNCHANGED" for record in records)
+
+
+def test_railway_volume_is_used_for_durable_state(monkeypatch, tmp_path):
+    monkeypatch.delenv("WASTE_SOURCE_REGISTRY_PATH", raising=False)
+    monkeypatch.delenv("WASTE_ANALYTICS_DB", raising=False)
+    monkeypatch.setenv("RAILWAY_VOLUME_MOUNT_PATH", str(tmp_path))
+    registry = source_registry_path()
+    assert registry == tmp_path / "source_registry.json"
+    assert registry.is_file()
+    assert _db_path() == tmp_path / "usage.db"
 
 
 def test_source_registry_path_honours_explicit_override(monkeypatch, tmp_path):
