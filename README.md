@@ -20,11 +20,11 @@ Production origin: `https://waste.regevidencehub.com`
 Commercial decision tools:
 
 - `waste_rule_preflight` — general England waste route and missing-facts preflight — **$0.02 USDC**
-- `carrier_broker_dealer_registration_preflight` — carrier/broker/dealer registration, renewal and change lifecycle — **$0.02 USDC**
-- `digital_waste_tracking_receipt_readiness` — phase-1 Digital Waste Tracking readiness for receiving sites — **$0.03 USDC**
-- `permit_change_impact` — current-vs-proposed operational change impact — **$0.03 USDC**
+- `waste_carrier_broker_dealer_preflight` — carrier/broker/dealer registration, renewal and change lifecycle — **$0.02 USDC**
+- `waste_digital_tracking_readiness` — phase-1 Digital Waste Tracking readiness for receiving sites — **$0.03 USDC**
+- `waste_permit_change_preflight` — current-vs-proposed operational change impact — **$0.03 USDC**
 
-Free discovery/evidence tools include `waste_rule_info`, `list_waste_rules`, `waste_source_status`, `check_waste_sources` and `get_source_registry`.
+Free discovery/evidence tools include `waste_service_info`, `waste_rule_catalog`, `waste_source_status`, `waste_source_audit` and `waste_source_registry`.
 
 The separate `/ai/mcp` and `/openai/mcp` public-AI surface is permanently payment-free and read-only. It exposes seven bounded tools: service info, rule catalogue, source status, general preflight, carrier/broker/dealer registration preflight, DWT receipt readiness and permit-change impact.
 

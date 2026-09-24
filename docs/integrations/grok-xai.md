@@ -14,13 +14,15 @@ https://docs.x.ai/grok/connectors
 
 Grok supports custom MCP connectors that point to a publicly reachable MCP server. The Waste public AI endpoint is intended for that path.
 
-The endpoint exposes five read-only tools:
+The endpoint exposes seven read-only tools:
 
-- `waste_rule_info`
-- `list_waste_rules`
+- `waste_service_info`
+- `waste_rule_catalog`
 - `waste_source_status`
 - `waste_rule_preflight`
-- `permit_change_impact`
+- `waste_carrier_broker_dealer_preflight`
+- `waste_digital_tracking_readiness`
+- `waste_permit_change_preflight`
 
 It does not expose Stripe checkout, x402 payment challenges, purchase links, or commercial mutation behavior.
 

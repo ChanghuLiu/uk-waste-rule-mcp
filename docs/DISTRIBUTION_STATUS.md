@@ -4,7 +4,7 @@ Updated: 2026-09-24
 
 ## Production
 
-- Version: 0.3.0
+- Version: 0.4.0
 - Canonical commercial MCP: https://waste.regevidencehub.com/mcp
 - Payment-free public AI MCP: https://waste.regevidencehub.com/ai/mcp
 - OpenAI MCP alias: https://waste.regevidencehub.com/openai/mcp
@@ -19,10 +19,10 @@ Updated: 2026-09-24
 
 | Channel | Status | Current gate |
 | --- | --- | --- |
-| Official MCP Registry | DONE | v0.3.0 published and verified from `server.json` |
+| Official MCP Registry | DONE | v0.4.0 metadata prepared and verified from `server.json` |
 | OpenAI Plugins | NEEDS_RESYNC_AND_DEMO | Draft/domain/private MCP app are working; v0.3.0 renamed the public tools, so Scan Tools/test tool names must be refreshed before final Submit; reviewer-accessible demo recording URL is still required |
 | Glama | LISTED_ONLINE_PENDING_CLAIM | Public connector exists, server responds, and 7 tools are visible. HTTP ownership challenge is deployed at `/.well-known/glama.json`; ownership confirmation and post-v0.3.0 TDQS rescore are pending |
-| Smithery | UI_READY_TO_PUBLISH | `smithery.yaml` points to the commercial `/mcp`; publish page is available under the existing `liuchanghu2018` namespace; final form submit is pending |
+| Smithery | PUBLISHED_NEEDS_RESCORE | Listing `liuchanghu2018/uk-waste-rule-mcp` is published; SmitheryBot successfully inspected commercial `/mcp`; v0.4.0 commercial naming/metadata cleanup is being deployed for a quality rescore |
 | Grok | READY_TO_CONNECT | Branded payment-free public-AI MCP is ready; connector add/verification is pending |
 | PayAI | PARTIAL | x402 compatibility and production smoke pass; last Bazaar watch on 2026-09-24 16:13 UTC returned `indexed=false` |
 
@@ -36,7 +36,7 @@ Updated: 2026-09-24
 6. `waste_digital_tracking_readiness`
 7. `waste_permit_change_preflight`
 
-The v0.3.0 naming cleanup is intentionally limited to the public-AI/directory surface. Existing commercial `/mcp` tool names and x402 behavior remain unchanged.
+v0.4.0 extends the same `waste_*` naming family to the commercial `/mcp` surface. Prices and x402 settlement behavior are unchanged.
 
 ## OpenAI current state
 
@@ -53,7 +53,7 @@ The v0.3.0 naming cleanup is intentionally limited to the public-AI/directory su
 - Server health shown by Glama: responding
 - Tool count: 7
 - Pre-v0.3.0 TDQS: D / 1.5
-- v0.3.0 improved routing descriptions, strict input schemas and naming consistency to target the CQC-level agent-selection quality
+- v0.4.0 retains improved routing descriptions, strict input schemas and naming consistency to target the CQC-level agent-selection quality
 - Ownership challenge token is served from `https://waste.regevidencehub.com/.well-known/glama.json`
 - Pending: ownership confirmation and Glama re-score
 
@@ -64,7 +64,7 @@ The v0.3.0 naming cleanup is intentionally limited to the public-AI/directory su
 - MCP Server URL: `https://waste.regevidencehub.com/mcp`
 - Recommended Server ID: `uk-waste-rule-mcp`
 - Repo metadata: `smithery.yaml` committed and CI-validated
-- Pending: final UI submit, then add the final Smithery listing backlink to the Waste discovery surface
+- Listing published; next step is re-publish/rescore after v0.4.0 reaches production and then add the final Smithery backlink to discovery metadata
 
 ## Next controllable work
 
