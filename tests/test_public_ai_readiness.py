@@ -130,3 +130,20 @@ def test_public_ai_tool_descriptions_and_schemas_are_agent_routable():
         scenario=schema["properties"]["scenario"]
         assert "$ref" in scenario or "properties" in scenario or "allOf" in scenario
         assert "additionalProperties" not in scenario or scenario["additionalProperties"] is not True
+
+
+def test_glama_claim_challenge_is_bounded(monkeypatch):
+    from uk_waste_rule_mcp import submission_pages
+
+    monkeypatch.delenv("GLAMA_CLAIM_TOKEN", raising=False)
+    response = asyncio.run(submission_pages.glama_claim_challenge(None))
+    assert response.status_code == 404
+
+    monkeypatch.setenv("GLAMA_CLAIM_TOKEN", "glama_claim_test_token")
+    response = asyncio.run(submission_pages.glama_claim_challenge(None))
+    assert response.status_code == 200
+    payload=json.loads(_body(response))
+    assert payload == {
+        "$schema": "https://glama.ai/mcp/schemas/connector.json",
+        "claim": "glama_claim_test_token",
+    }

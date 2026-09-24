@@ -442,7 +442,7 @@ def main() -> None:
     from starlette.routing import Mount, Route
     from .discovery_observability import DiscoveryObservabilityASGI
     from .public_ai_server import build_public_ai_server
-    from .submission_pages import openai_apps_challenge, plugin_product_page, privacy_page, support_page, terms_page
+    from .submission_pages import glama_claim_challenge, openai_apps_challenge, plugin_product_page, privacy_page, support_page, terms_page
 
     host=os.getenv("HOST","0.0.0.0")
     port=int(os.getenv("PORT","8000"))
@@ -464,6 +464,7 @@ def main() -> None:
         Route("/plugin/terms",endpoint=terms_page,methods=["GET"]),
         Route("/plugin/support",endpoint=support_page,methods=["GET"]),
         Route("/.well-known/openai-apps-challenge",endpoint=openai_apps_challenge,methods=["GET"]),
+        Route("/.well-known/glama.json",endpoint=glama_claim_challenge,methods=["GET"]),
         *safe_mcp_surface_mounts(public_ai_app),
         Mount("/",app=commercial_app),
     ],lifespan=lifespan)

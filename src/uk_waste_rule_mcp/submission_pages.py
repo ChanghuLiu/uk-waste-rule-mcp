@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from html import escape
 
-from starlette.responses import HTMLResponse, PlainTextResponse, Response
+from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 
 from .public_ai_server import PUBLIC_AI_SERVER_NAME
 
@@ -93,3 +93,13 @@ async def openai_apps_challenge(_request):
     if not token:
         return Response(status_code=404)
     return PlainTextResponse(token, media_type="text/plain")
+
+
+async def glama_claim_challenge(_request):
+    token = os.getenv("GLAMA_CLAIM_TOKEN", "").strip()
+    if not token:
+        return Response(status_code=404)
+    return JSONResponse({
+        "$schema": "https://glama.ai/mcp/schemas/connector.json",
+        "claim": token,
+    })
