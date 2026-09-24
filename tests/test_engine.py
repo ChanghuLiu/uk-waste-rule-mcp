@@ -75,8 +75,8 @@ def test_carrier_has_duty_of_care_review():
         "hazardous_status": False,
     })
     assert any(item["code"] == "DUTY-001" for item in result["findings"])
-    assert result["decision"]["status"] == "REVIEW_REQUIRED"
-    assert any(item["code"] == "SOURCE-001" for item in result["findings"])
+    assert result["decision"]["status"] == "SCREENING_COMPLETE_REVIEW_REQUIRED"
+    assert not any(item["code"] == "SOURCE-001" for item in result["findings"])
 
 
 def test_change_impact_requires_current_and_proposed_facts():
@@ -146,8 +146,9 @@ def test_source_registry_contains_reviewed_baselines():
     assert len(records) == 8
     reviewed = [record for record in records if record.get("baseline_sha256")]
     pending = [record for record in records if not record.get("baseline_sha256")]
-    assert len(reviewed) == 6
-    assert {record["id"] for record in pending} == {"govuk-cbd-registration", "govuk-waste-environmental-permits"}
+    assert len(reviewed) == 8
+    assert pending == []
+    assert all(record.get("last_status") == "UNCHANGED" for record in records)
 
 
 def test_source_registry_path_honours_explicit_override(monkeypatch, tmp_path):
