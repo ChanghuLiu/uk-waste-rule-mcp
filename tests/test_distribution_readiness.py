@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_registry_metadata_uses_branded_public_ai_surface():
     server=json.loads((ROOT/"server.json").read_text(encoding="utf-8"))
     assert server["name"]=="io.github.ChanghuLiu/uk-waste-rule-mcp"
-    assert server["version"]=="0.4.0"
+    assert server["version"]=="0.4.1"
     assert server["repository"]["id"]=="1381814950"
     assert server["remotes"]==[{"type":"streamable-http","url":"https://waste.regevidencehub.com/ai/mcp"}]
 
