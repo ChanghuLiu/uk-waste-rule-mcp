@@ -27,13 +27,13 @@ PUBLIC_AI_SERVER_DESCRIPTION = (
     "classify hazardous waste, assign waste codes, approve operations, or provide legal advice."
 )
 PUBLIC_AI_TOOL_NAMES = (
-    "waste_rule_info",
-    "list_waste_rules",
+    "waste_service_info",
+    "waste_rule_catalog",
     "waste_source_status",
     "waste_rule_preflight",
-    "carrier_broker_dealer_registration_preflight",
-    "digital_waste_tracking_receipt_readiness",
-    "permit_change_impact",
+    "waste_carrier_broker_dealer_preflight",
+    "waste_digital_tracking_readiness",
+    "waste_permit_change_preflight",
 )
 
 class _StrictModel(BaseModel):
@@ -168,11 +168,11 @@ def build_public_ai_server() -> MCPServer:
         instructions=(
             PUBLIC_AI_SERVER_DESCRIPTION
             + " All tools on this endpoint are free and payment-free. "
-            + "Start with waste_rule_info for service scope or list_waste_rules for valid role/activity identifiers. "
+            + "Start with waste_service_info for service scope or waste_rule_catalog for valid role/activity identifiers. "
             + "Use waste_rule_preflight only for general current-operation routing. "
-            + "Use carrier_broker_dealer_registration_preflight instead for carrier/broker/dealer registration lifecycle questions. "
-            + "Use digital_waste_tracking_receipt_readiness instead for phase-1 England receiving-site reporting readiness. "
-            + "Use permit_change_impact instead when comparing known current and proposed operating facts. "
+            + "Use waste_carrier_broker_dealer_preflight instead for carrier/broker/dealer registration lifecycle questions. "
+            + "Use waste_digital_tracking_readiness instead for phase-1 England receiving-site reporting readiness. "
+            + "Use waste_permit_change_preflight instead when comparing known current and proposed operating facts. "
             + "Use waste_source_status only for official-evidence freshness. "
             + "Never infer hazardous status, waste codes, permit conditions, exemption eligibility or regulator approval."
         ),
@@ -188,7 +188,7 @@ def build_public_ai_server() -> MCPServer:
         annotations=_annotations("Waste service and tool information"),
         structured_output=True,
     )
-    def waste_rule_info() -> dict[str, Any]:
+    def waste_service_info() -> dict[str, Any]:
         return {
             "product": PRODUCT,
             "version": __version__,
@@ -210,7 +210,7 @@ def build_public_ai_server() -> MCPServer:
         annotations=_annotations("List supported waste roles and activity identifiers"),
         structured_output=True,
     )
-    def list_waste_rules() -> dict[str, Any]:
+    def waste_rule_catalog() -> dict[str, Any]:
         return catalogue()
 
     @server.tool(
@@ -241,7 +241,7 @@ def build_public_ai_server() -> MCPServer:
         return waste_preflight(scenario.model_dump(exclude_none=True))
 
     @server.tool(
-        name="carrier_broker_dealer_registration_preflight",
+        name="waste_carrier_broker_dealer_preflight",
         description=(
             "FREE CARRIER/BROKER/DEALER REGISTRATION LIFECYCLE tool for England. Select when the unresolved question is a new registration, "
             "renewal, detail/activity change, legal-type change, or lower-to-upper change for a carrier, broker or dealer. "
@@ -255,7 +255,7 @@ def build_public_ai_server() -> MCPServer:
         return cbd_preflight(scenario.model_dump(exclude_none=True))
 
     @server.tool(
-        name="digital_waste_tracking_receipt_readiness",
+        name="waste_digital_tracking_readiness",
         description=(
             "FREE DIGITAL WASTE TRACKING RECEIVING-SITE READINESS tool for England phase 1. Select only when the question is whether a waste receiving site "
             "is in the permitted/licensed receiving-site scope and ready for receipt reporting around the 1 October 2026 mandatory start. "
@@ -269,7 +269,7 @@ def build_public_ai_server() -> MCPServer:
         return dwt_readiness(scenario.model_dump(exclude_none=True))
 
     @server.tool(
-        name="permit_change_impact",
+        name="waste_permit_change_preflight",
         description=(
             "FREE PERMIT-CHANGE IMPACT PREFLIGHT for an EXISTING England waste operation when both current and proposed operating facts are available. "
             "Compare modelled fields such as location, activities, waste types, quantity, storage, treatment or operating hours. "

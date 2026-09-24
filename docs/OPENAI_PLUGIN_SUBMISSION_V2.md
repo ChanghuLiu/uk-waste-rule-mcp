@@ -30,13 +30,13 @@ This is the current OpenAI Platform **With MCP** submission packet for the brand
 
 Expected Scan Tools result: exactly seven tools:
 
-1. `waste_rule_info`
-2. `list_waste_rules`
+1. `waste_service_info`
+2. `waste_rule_catalog`
 3. `waste_source_status`
 4. `waste_rule_preflight`
-5. `carrier_broker_dealer_registration_preflight`
-6. `digital_waste_tracking_receipt_readiness`
-7. `permit_change_impact`
+5. `waste_carrier_broker_dealer_preflight`
+6. `waste_digital_tracking_readiness`
+7. `waste_permit_change_preflight`
 
 Every tool must scan with `readOnlyHint=true`, `openWorldHint=false`, and `destructiveHint=false`.
 

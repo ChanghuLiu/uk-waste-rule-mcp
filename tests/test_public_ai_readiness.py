@@ -37,7 +37,7 @@ def test_public_ai_mcp_is_payment_free_and_read_only(monkeypatch):
                 "jsonrpc": "2.0",
                 "id": 2,
                 "method": "tools/call",
-                "params": {"name": "waste_rule_info", "arguments": {}},
+                "params": {"name": "waste_service_info", "arguments": {}},
             },
         )
 
@@ -119,12 +119,12 @@ def test_public_ai_tool_descriptions_and_schemas_are_agent_routable():
     for name,tool in tools.items():
         description=tool.get("description","")
         assert len(description)>=120, name
-        assert "Do NOT use" in description or name in {"waste_rule_info","list_waste_rules","waste_source_status"}, name
+        assert "Do NOT use" in description or name in {"waste_service_info","waste_rule_catalog","waste_source_status"}, name
     for name in (
         "waste_rule_preflight",
-        "carrier_broker_dealer_registration_preflight",
-        "digital_waste_tracking_receipt_readiness",
-        "permit_change_impact",
+        "waste_carrier_broker_dealer_preflight",
+        "waste_digital_tracking_readiness",
+        "waste_permit_change_preflight",
     ):
         schema=tools[name]["inputSchema"]
         scenario=schema["properties"]["scenario"]

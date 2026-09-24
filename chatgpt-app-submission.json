@@ -8,16 +8,24 @@
     "category": "BUSINESS"
   },
   "tools": {
-    "waste_rule_info": {
-      "annotations": {"readOnlyHint": true, "openWorldHint": false, "destructiveHint": false},
+    "waste_service_info": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
       "justifications": {
         "read_only_justification": "Returns bounded connector scope, jurisdiction, supported workflows, evidence-health summary, and safety boundaries without creating, updating, or deleting external records.",
         "open_world_justification": "Does not publish content, submit regulatory data, or modify any public or third-party system.",
         "destructive_justification": "Cannot delete, overwrite, revoke, submit, or irreversibly change any user, regulator, permit, registration, or waste record."
       }
     },
-    "list_waste_rules": {
-      "annotations": {"readOnlyHint": true, "openWorldHint": false, "destructiveHint": false},
+    "waste_rule_catalog": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
       "justifications": {
         "read_only_justification": "Reads a bounded local catalogue of supported England waste roles, activities, and regulatory routes.",
         "open_world_justification": "Does not contact or modify the Environment Agency or any other third-party service.",
@@ -25,7 +33,11 @@
       }
     },
     "waste_source_status": {
-      "annotations": {"readOnlyHint": true, "openWorldHint": false, "destructiveHint": false},
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
       "justifications": {
         "read_only_justification": "Returns persisted official-source freshness and fail-closed status without changing reviewed baselines.",
         "open_world_justification": "Does not write to public websites or external regulatory systems.",
@@ -33,31 +45,47 @@
       }
     },
     "waste_rule_preflight": {
-      "annotations": {"readOnlyHint": true, "openWorldHint": false, "destructiveHint": false},
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
       "justifications": {
         "read_only_justification": "Evaluates user-supplied facts against a deterministic local England waste-rule model and returns guidance only.",
         "open_world_justification": "Does not submit registrations, permits, exemptions, waste records, or Digital Waste Tracking data.",
         "destructive_justification": "Cannot create, revoke, overwrite, delete, or irreversibly change any regulatory record."
       }
     },
-    "carrier_broker_dealer_registration_preflight": {
-      "annotations": {"readOnlyHint": true, "openWorldHint": false, "destructiveHint": false},
+    "waste_carrier_broker_dealer_preflight": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
       "justifications": {
         "read_only_justification": "Evaluates supplied carrier, broker, dealer, renewal, and change facts against a bounded local registration model.",
         "open_world_justification": "Does not register, renew, or change a carrier/broker/dealer record with the Environment Agency.",
         "destructive_justification": "Cannot submit, cancel, revoke, overwrite, or delete a registration."
       }
     },
-    "digital_waste_tracking_receipt_readiness": {
-      "annotations": {"readOnlyHint": true, "openWorldHint": false, "destructiveHint": false},
+    "waste_digital_tracking_readiness": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
       "justifications": {
         "read_only_justification": "Checks user-supplied receiving-site facts against a bounded Digital Waste Tracking readiness model.",
         "open_world_justification": "Does not send waste-tracking data, filings, or records to a regulator or third party.",
         "destructive_justification": "Cannot change, submit, overwrite, or delete Digital Waste Tracking records."
       }
     },
-    "permit_change_impact": {
-      "annotations": {"readOnlyHint": true, "openWorldHint": false, "destructiveHint": false},
+    "waste_permit_change_preflight": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
       "justifications": {
         "read_only_justification": "Compares current and proposed user-supplied operating facts and identifies bounded fields requiring regulatory review.",
         "open_world_justification": "Does not vary, replace, submit, or modify an environmental permit or exemption.",
@@ -78,7 +106,7 @@
       "description": "Check carrier registration lifecycle for a business transporting other people's waste.",
       "user_prompt": "Our England business transports other companies' waste and needs a new waste carrier registration. What should we check?",
       "file_attachment_urls": null,
-      "tools_triggered": "carrier_broker_dealer_registration_preflight",
+      "tools_triggered": "waste_carrier_broker_dealer_preflight",
       "expected_output": "Returns the bounded carrier/broker/dealer registration route, identifies missing lifecycle facts if any, and does not submit or independently assign regulator approval.",
       "expected_output_url": null
     },
@@ -86,7 +114,7 @@
       "description": "Check receiving-site Digital Waste Tracking readiness.",
       "user_prompt": "Our permitted receiving site in England accepts controlled waste. Are we ready for Digital Waste Tracking receipt reporting?",
       "file_attachment_urls": null,
-      "tools_triggered": "digital_waste_tracking_receipt_readiness",
+      "tools_triggered": "waste_digital_tracking_readiness",
       "expected_output": "Returns a bounded receiving-site readiness assessment, identifies reporting-method or authorization facts that still need confirmation, and does not submit tracking data.",
       "expected_output_url": null
     },
@@ -94,7 +122,7 @@
       "description": "Screen a proposed operational change for permit review.",
       "user_prompt": "Our permitted waste site wants to increase its maximum quantity from 10 tonnes to 20 tonnes. What regulatory review should we do?",
       "file_attachment_urls": null,
-      "tools_triggered": "permit_change_impact",
+      "tools_triggered": "waste_permit_change_preflight",
       "expected_output": "Compares current and proposed facts, identifies the changed modeled field for permit or exemption review, and does not conclude that a permit variation is legally required without sufficient evidence.",
       "expected_output_url": null
     },
