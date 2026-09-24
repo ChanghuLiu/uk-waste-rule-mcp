@@ -1,0 +1,21 @@
+startCommand:
+  type: http
+  url: https://waste.regevidencehub.com/mcp
+
+description: >-
+  RegEvidenceHub Waste provides evidence-linked England waste regulatory preflight
+  over Streamable HTTP. It covers general waste-route selection,
+  carrier/broker/dealer registration lifecycle, Digital Waste Tracking
+  receiving-site readiness, permit-change impact, and official-source health.
+  Commercial decision tools use x402 v2 on Base mainnet.
+
+metadata:
+  homepage: https://waste.regevidencehub.com/waste-rule-preflight
+  documentation: https://github.com/ChanghuLiu/uk-waste-rule-mcp
+  tags:
+    - waste
+    - england
+    - compliance
+    - environment-agency
+    - remote-mcp
+    - x402

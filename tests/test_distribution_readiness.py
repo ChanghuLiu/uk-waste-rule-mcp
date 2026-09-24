@@ -24,3 +24,13 @@ def test_payai_bazaar_metadata_is_bounded():
     assert len(BAZAAR_SERVICE_NAME)<=32
     assert 1<=len(BAZAAR_TAGS)<=5
     assert len(set(BAZAAR_TAGS))==len(BAZAAR_TAGS)
+
+
+def test_smithery_remote_points_to_commercial_branded_mcp():
+    raw=(ROOT/"smithery.yaml").read_text(encoding="utf-8")
+    assert "type: http" in raw
+    assert "url: https://waste.regevidencehub.com/mcp" in raw
+    assert "openai/mcp" not in raw
+    assert "ai/mcp" not in raw
+    assert "environment-agency" in raw
+    assert "x402" in raw
