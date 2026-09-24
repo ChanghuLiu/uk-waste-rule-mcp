@@ -17,7 +17,7 @@ This is the current OpenAI Platform **With MCP** submission packet for the brand
 ## App Info
 
 - Display name: `RegEvidenceHub Waste`
-- Subtitle: `England waste compliance preflight`
+- Subtitle: `England waste compliance`
 - Category: `BUSINESS`
 - Website: `https://waste.regevidencehub.com/waste-rule-preflight`
 - Product page: `https://waste.regevidencehub.com/waste-rule-preflight`

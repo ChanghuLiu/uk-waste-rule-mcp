@@ -101,3 +101,32 @@ def test_submission_pages_are_public_ai_scoped_and_payment_free(monkeypatch):
     assert response.status_code == 200
     assert _body(response) == "waste-openai-domain-proof"
     assert response.media_type == "text/plain"
+
+
+def test_public_ai_tool_descriptions_and_schemas_are_agent_routable():
+    pytest.importorskip("mcp.server")
+    pytest.importorskip("starlette.testclient")
+    from starlette.testclient import TestClient
+    from uk_waste_rule_mcp import public_ai_server
+
+    server=public_ai_server.build_public_ai_server()
+    app=server.streamable_http_app(json_response=True,stateless_http=True,host="testserver")
+    with TestClient(app) as client:
+        listing=client.post("/mcp",json={"jsonrpc":"2.0","id":99,"method":"tools/list","params":{}})
+    assert listing.status_code==200
+    tools={tool["name"]:tool for tool in listing.json()["result"]["tools"]}
+    assert set(tools)==set(public_ai_server.PUBLIC_AI_TOOL_NAMES)
+    for name,tool in tools.items():
+        description=tool.get("description","")
+        assert len(description)>=120, name
+        assert "Do NOT use" in description or name in {"waste_rule_info","list_waste_rules","waste_source_status"}, name
+    for name in (
+        "waste_rule_preflight",
+        "carrier_broker_dealer_registration_preflight",
+        "digital_waste_tracking_receipt_readiness",
+        "permit_change_impact",
+    ):
+        schema=tools[name]["inputSchema"]
+        scenario=schema["properties"]["scenario"]
+        assert "$ref" in scenario or "properties" in scenario or "allOf" in scenario
+        assert "additionalProperties" not in scenario or scenario["additionalProperties"] is not True
