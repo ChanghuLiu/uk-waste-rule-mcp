@@ -30,7 +30,7 @@ The separate `/ai/mcp` and `/openai/mcp` public-AI surface is permanently paymen
 
 ## Evidence model
 
-The checked-in registry contains eight official GOV.UK / Environment Agency sources. Six have reviewed semantic fingerprints from the original MVP; the two new decision-bearing sources are intentionally held behind `MISSING_BASELINE` until a live production fetch is manually reviewed and promoted.
+The checked-in registry contains eight official GOV.UK / Environment Agency sources. All eight now have reviewed semantic fingerprints. On 24 September 2026, a live production audit confirmed five existing baselines unchanged; the carrier/broker/dealer registration source and waste environmental-permits source were manually reviewed and promoted, and the software-provider source was re-reviewed after GOV.UK updated its provider list without changing the modeled DWT obligation or 1 October 2026 timing.
 
 A source is decision-usable only when:
 
