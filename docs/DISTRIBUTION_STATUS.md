@@ -22,8 +22,8 @@ Updated: 2026-09-24
 | Official MCP Registry | DONE | v0.4.1 published and verified from `server.json` |
 | OpenAI Plugins | NEEDS_RESYNC_AND_DEMO | Draft/domain/private MCP app are working; v0.3.0 renamed the public tools, so Scan Tools/test tool names must be refreshed before final Submit; reviewer-accessible demo recording URL is still required |
 | Glama | LISTED_ONLINE_PENDING_CLAIM | Public connector exists, server responds, and 7 tools are visible. HTTP ownership challenge is deployed at `/.well-known/glama.json`; ownership confirmation and post-v0.3.0 TDQS rescore are pending |
-| Smithery | PUBLISHED_NEEDS_RESCORE | Listing `liuchanghu2018/uk-waste-rule-mcp` is published. Commercial `/mcp` is healthy with 9 tools; v0.4.1 adds strict field-level schemas for the four paid decision tools. One new Smithery release is needed to refresh the score from the prior 58 baseline. |
-| Grok | READY_TO_CONNECT | Branded payment-free public-AI MCP is ready; connector add/verification is pending |
+| Smithery | DONE | Listing `liuchanghu2018/uk-waste-rule-mcp` is published. Commercial `/mcp` is healthy with 9 tools. A fresh Smithery release was published on 2026-09-24 after the v0.4.1 schema improvements; do not publish again unless the MCP contract changes. |
+| Grok | DONE | Branded payment-free public-AI MCP connector was added and verified on 2026-09-24 |
 | PayAI | PARTIAL | x402 compatibility and production smoke pass; latest Bazaar watch on 2026-09-24 19:23 UTC returned `indexed=false` |
 
 ## Public-AI v0.3.0 tools
@@ -64,12 +64,11 @@ v0.4.0 extended the same `waste_*` naming family to the commercial `/mcp` surfac
 - MCP Server URL: `https://waste.regevidencehub.com/mcp`
 - Recommended Server ID: `uk-waste-rule-mcp`
 - Repo metadata: `smithery.yaml` committed and CI-validated
-- Listing published at `https://smithery.ai/servers/liuchanghu2018/uk-waste-rule-mcp`; prior quality baseline is 58. v0.4.1 is now production-ready with stricter schemas; publish exactly one new Smithery release to refresh metadata/score.
+- Listing published at `https://smithery.ai/servers/liuchanghu2018/uk-waste-rule-mcp`; prior quality baseline was 58. A fresh release was published after the v0.4.1 stricter-schema update. Do not publish another release unless the MCP contract changes.
 
 ## Next controllable work
 
 1. Confirm Glama ownership once its HTTP challenge is checked/rechecked.
-2. Publish exactly one new Smithery release for v0.4.1, then record the refreshed quality score.
-3. Add/verify the Grok connector.
-4. Re-check PayAI Bazaar indexing after external propagation.
-5. Return to OpenAI: re-scan current 7 public-AI tools, refresh test tool names if needed, attach demo URL, then Submit.
+2. Record the refreshed Smithery quality score when Smithery finishes rescoring the latest release.
+3. Re-check PayAI Bazaar indexing after external propagation.
+4. Return to OpenAI: re-scan current 7 public-AI tools, refresh test tool names if needed, attach demo URL, then Submit.
