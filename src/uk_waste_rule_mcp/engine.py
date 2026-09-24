@@ -43,17 +43,17 @@ ACTIVITIES: dict[str, dict[str, Any]] = {
     "receive_waste": {
         "label": "Receive waste at a site",
         "route": "PERMIT_OR_EXEMPTION_AND_DIGITAL_TRACKING_REVIEW",
-        "source_ids": ["govuk-environmental-permits", "govuk-waste-exemptions", "govuk-digital-waste-tracking-service"],
+        "source_ids": ["govuk-environmental-permits", "govuk-waste-environmental-permits", "govuk-waste-exemptions", "govuk-digital-waste-tracking-service"],
     },
     "store_waste": {
         "label": "Store waste",
         "route": "PERMIT_OR_EXEMPTION_REVIEW",
-        "source_ids": ["govuk-environmental-permits", "govuk-waste-exemptions"],
+        "source_ids": ["govuk-environmental-permits", "govuk-waste-environmental-permits", "govuk-waste-exemptions"],
     },
     "treat_recover_dispose_waste": {
         "label": "Treat, recover or dispose of waste",
         "route": "PERMIT_OR_EXEMPTION_REVIEW",
-        "source_ids": ["govuk-environmental-permits", "govuk-waste-exemptions"],
+        "source_ids": ["govuk-environmental-permits", "govuk-waste-environmental-permits", "govuk-waste-exemptions"],
     },
 }
 
@@ -137,7 +137,7 @@ def permit_change_impact(scenario: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(scenario, dict):
         raise TypeError("scenario must be an object")
     nation = _norm(scenario.get("nation", ""))
-    source_ids = {"govuk-environmental-permits", "govuk-waste-exemptions"}
+    source_ids = {"govuk-environmental-permits", "govuk-waste-environmental-permits", "govuk-waste-exemptions"}
     findings: list[dict[str, Any]] = []
     source_gate = _source_gate(source_ids)
     if not source_gate["decision_usable"]:
@@ -201,7 +201,7 @@ def waste_preflight(scenario: dict[str, Any]) -> dict[str, Any]:
         if activity in ACTIVITIES:
             source_ids.update(ACTIVITIES[activity]["source_ids"])
     if not source_ids:
-        source_ids.update({"govuk-environmental-permits", "govuk-waste-duty-of-care"})
+        source_ids.update({"govuk-environmental-permits", "govuk-waste-environmental-permits", "govuk-waste-duty-of-care"})
     source_gate = _source_gate(source_ids)
     if not source_gate["decision_usable"]:
         findings.append(_finding("SOURCE-001", "blocking", "review_required", "One or more official sources are missing a current unchanged fingerprint or are stale; no regulatory conclusion is returned.", sorted(source_ids)))
@@ -227,7 +227,7 @@ def waste_preflight(scenario: dict[str, Any]) -> dict[str, Any]:
             if scenario.get(field) in (None, "", []):
                 findings.append(_finding(f"FACT-{field.upper()}", "blocking", "missing", message, sorted(source_ids)))
         if role in {"receiver", "operator"} and scenario.get("authorisation_status") in (None, ""):
-            findings.append(_finding("AUTH-001", "blocking", "missing", "State whether the site currently relies on a permit, exemption, licence or no authorisation; the route is not inferred.", ["govuk-environmental-permits", "govuk-waste-exemptions"]))
+            findings.append(_finding("AUTH-001", "blocking", "missing", "State whether the site currently relies on a permit, exemption, licence or no authorisation; the route is not inferred.", ["govuk-environmental-permits", "govuk-waste-environmental-permits", "govuk-waste-exemptions"]))
         if "receive_waste" in activities:
             source_ids.add("govuk-digital-waste-tracking-service")
             findings.append(_finding("DWT-001", "warning", "review_required", "Receiving-site digital tracking scope and reporting readiness require a separate fact and timeline check.", ["govuk-digital-waste-tracking-service", "govuk-report-receipt-of-waste"]))
