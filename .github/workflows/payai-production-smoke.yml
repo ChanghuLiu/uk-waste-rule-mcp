@@ -6,6 +6,7 @@ on:
     paths:
       - scripts/x402_paid_smoke.py
       - src/uk_waste_rule_mcp/x402_mcp2.py
+      - src/uk_waste_rule_mcp/production_bridge.py
       - .github/workflows/payai-production-smoke.yml
 permissions:
   contents: read
@@ -18,6 +19,37 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: python -m pip install --upgrade pip && pip install -e '.[mcp]' 'x402[evm]==2.21.0'
+      - name: Verify commercial production tool contract
+        env:
+          WASTE_PAID_MCP_URL: https://waste.regevidencehub.com/mcp
+        run: |
+          python - <<'PY'
+          import asyncio, os
+          from mcp import ClientSession
+          from mcp.client.streamable_http import streamable_http_client
+
+          endpoint=os.environ["WASTE_PAID_MCP_URL"]
+          expected=[
+              "waste_service_info",
+              "waste_rule_catalog",
+              "waste_source_status",
+              "waste_source_audit",
+              "waste_source_registry",
+              "waste_rule_preflight",
+              "waste_carrier_broker_dealer_preflight",
+              "waste_digital_tracking_readiness",
+              "waste_permit_change_preflight",
+          ]
+          async def main():
+              async with streamable_http_client(endpoint) as streams:
+                  async with ClientSession(streams[0], streams[1]) as session:
+                      await session.initialize()
+                      result=await session.list_tools()
+                      names=[tool.name for tool in result.tools]
+                      assert names == expected, {"expected":expected,"actual":names}
+                      print("WASTE_PRODUCTION_TOOL_CONTRACT=PASS", names)
+          asyncio.run(main())
+          PY
       - name: Verify branded production unpaid challenge
         env:
           WASTE_PAID_MCP_URL: https://waste.regevidencehub.com/mcp
