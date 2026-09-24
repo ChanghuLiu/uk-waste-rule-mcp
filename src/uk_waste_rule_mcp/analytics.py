@@ -29,7 +29,13 @@ ALIASES = {
 }
 
 def _db_path() -> Path:
-    return Path(os.getenv("WASTE_ANALYTICS_DB", "").strip() or _DEFAULT_DB)
+    explicit = os.getenv("WASTE_ANALYTICS_DB", "").strip()
+    if explicit:
+        return Path(explicit)
+    volume = os.getenv("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
+    if volume:
+        return Path(volume) / "usage.db"
+    return Path(_DEFAULT_DB)
 
 def _revision() -> str:
     return (os.getenv("RAILWAY_GIT_COMMIT_SHA") or os.getenv("WASTE_DEPLOY_REV") or "unknown").strip() or "unknown"
