@@ -3,161 +3,133 @@
   "schema_version": 1,
   "app_info": {
     "display_name": "RegEvidenceHub Waste",
-    "subtitle": "England waste-rule preflight",
-    "description": "RegEvidenceHub Waste provides conservative, evidence-linked England waste-regulatory preflight for general waste routes, carrier/broker/dealer registration lifecycle, phase-1 Digital Waste Tracking receiving-site readiness and permit-change impact. It is deterministic and fail-closed. It does not submit registrations, permits, exemptions or waste records, determine hazardous status or waste codes, guarantee regulator approval, or expose payment and checkout flows on the public AI surface.",
+    "subtitle": "England waste compliance preflight",
+    "description": "RegEvidenceHub Waste helps users navigate England waste regulatory workflows using bounded, evidence-linked preflight tools. It can route current waste operations, check carrier/broker/dealer registration lifecycle questions, assess Digital Waste Tracking receiving-site readiness, screen proposed permit-impact changes, and report official-source health. It uses user-supplied facts, fails closed when decisive evidence is stale or incomplete, does not submit anything to the Environment Agency, and does not provide regulator approval or legal advice.",
     "category": "BUSINESS"
   },
   "tools": {
     "waste_rule_info": {
-      "annotations": {
-        "readOnlyHint": true,
-        "openWorldHint": false,
-        "destructiveHint": false
-      },
+      "annotations": {"readOnlyHint": true, "openWorldHint": false, "destructiveHint": false},
       "justifications": {
-        "read_only_justification": "Returns bounded service scope, public-AI tool inventory and source-health metadata without changing any external record.",
-        "open_world_justification": "Does not publish information or modify any public or third-party system.",
-        "destructive_justification": "Cannot submit, delete, overwrite, revoke, register, permit or otherwise alter any regulatory record."
+        "read_only_justification": "Returns bounded connector scope, jurisdiction, supported workflows, evidence-health summary, and safety boundaries without creating, updating, or deleting external records.",
+        "open_world_justification": "Does not publish content, submit regulatory data, or modify any public or third-party system.",
+        "destructive_justification": "Cannot delete, overwrite, revoke, submit, or irreversibly change any user, regulator, permit, registration, or waste record."
       }
     },
     "list_waste_rules": {
-      "annotations": {
-        "readOnlyHint": true,
-        "openWorldHint": false,
-        "destructiveHint": false
-      },
+      "annotations": {"readOnlyHint": true, "openWorldHint": false, "destructiveHint": false},
       "justifications": {
-        "read_only_justification": "Reads the bounded local catalogue of supported England waste roles, activities and routes.",
-        "open_world_justification": "Does not contact or modify a regulator or third-party system.",
-        "destructive_justification": "Cannot change or submit any waste, permit, exemption or registration record."
+        "read_only_justification": "Reads a bounded local catalogue of supported England waste roles, activities, and regulatory routes.",
+        "open_world_justification": "Does not contact or modify the Environment Agency or any other third-party service.",
+        "destructive_justification": "Cannot submit, change, or delete permits, exemptions, registrations, or waste records."
       }
     },
     "waste_source_status": {
-      "annotations": {
-        "readOnlyHint": true,
-        "openWorldHint": false,
-        "destructiveHint": false
-      },
+      "annotations": {"readOnlyHint": true, "openWorldHint": false, "destructiveHint": false},
       "justifications": {
-        "read_only_justification": "Reads the persisted reviewed official-source freshness and fingerprint state without changing it.",
-        "open_world_justification": "Does not perform an external write or publish data.",
-        "destructive_justification": "Cannot alter evidence baselines, official sources or regulatory records."
+        "read_only_justification": "Returns persisted official-source freshness and fail-closed status without changing reviewed baselines.",
+        "open_world_justification": "Does not write to public websites or external regulatory systems.",
+        "destructive_justification": "Cannot alter official evidence, Environment Agency records, or any external state."
       }
     },
     "waste_rule_preflight": {
-      "annotations": {
-        "readOnlyHint": true,
-        "openWorldHint": false,
-        "destructiveHint": false
-      },
+      "annotations": {"readOnlyHint": true, "openWorldHint": false, "destructiveHint": false},
       "justifications": {
-        "read_only_justification": "Evaluates only user-supplied bounded facts against the local deterministic preflight model and returns guidance.",
-        "open_world_justification": "Does not submit facts to the Environment Agency or any other third party.",
-        "destructive_justification": "Cannot register a carrier, issue a permit or exemption, submit waste records, or mutate external state."
-      }
-    },
-    "permit_change_impact": {
-      "annotations": {
-        "readOnlyHint": true,
-        "openWorldHint": false,
-        "destructiveHint": false
-      },
-      "justifications": {
-        "read_only_justification": "Compares user-supplied current and proposed operating facts and reports fields requiring review.",
-        "open_world_justification": "Does not contact, update or submit changes to a regulator.",
-        "destructive_justification": "Cannot vary, revoke, amend or create any permit, exemption or other regulatory record."
+        "read_only_justification": "Evaluates user-supplied facts against a deterministic local England waste-rule model and returns guidance only.",
+        "open_world_justification": "Does not submit registrations, permits, exemptions, waste records, or Digital Waste Tracking data.",
+        "destructive_justification": "Cannot create, revoke, overwrite, delete, or irreversibly change any regulatory record."
       }
     },
     "carrier_broker_dealer_registration_preflight": {
-      "annotations": {
-        "readOnlyHint": true,
-        "openWorldHint": false,
-        "destructiveHint": false
-      },
+      "annotations": {"readOnlyHint": true, "openWorldHint": false, "destructiveHint": false},
       "justifications": {
-        "read_only_justification": "Evaluates bounded user-supplied England carrier/broker/dealer lifecycle facts against the reviewed local decision model.",
-        "open_world_justification": "Does not submit a registration, renewal or change to the Environment Agency.",
-        "destructive_justification": "Cannot create, renew, amend or revoke a carrier, broker or dealer registration."
+        "read_only_justification": "Evaluates supplied carrier, broker, dealer, renewal, and change facts against a bounded local registration model.",
+        "open_world_justification": "Does not register, renew, or change a carrier/broker/dealer record with the Environment Agency.",
+        "destructive_justification": "Cannot submit, cancel, revoke, overwrite, or delete a registration."
       }
     },
     "digital_waste_tracking_receipt_readiness": {
-      "annotations": {
-        "readOnlyHint": true,
-        "openWorldHint": false,
-        "destructiveHint": false
-      },
+      "annotations": {"readOnlyHint": true, "openWorldHint": false, "destructiveHint": false},
       "justifications": {
-        "read_only_justification": "Evaluates bounded receiving-site facts against the reviewed phase-1 Digital Waste Tracking model.",
-        "open_world_justification": "Does not upload waste records or call the reporting API on the user's behalf.",
-        "destructive_justification": "Cannot create, edit or submit Digital Waste Tracking records."
+        "read_only_justification": "Checks user-supplied receiving-site facts against a bounded Digital Waste Tracking readiness model.",
+        "open_world_justification": "Does not send waste-tracking data, filings, or records to a regulator or third party.",
+        "destructive_justification": "Cannot change, submit, overwrite, or delete Digital Waste Tracking records."
+      }
+    },
+    "permit_change_impact": {
+      "annotations": {"readOnlyHint": true, "openWorldHint": false, "destructiveHint": false},
+      "justifications": {
+        "read_only_justification": "Compares current and proposed user-supplied operating facts and identifies bounded fields requiring regulatory review.",
+        "open_world_justification": "Does not vary, replace, submit, or modify an environmental permit or exemption.",
+        "destructive_justification": "Cannot perform any irreversible permit, exemption, registration, or operational change."
       }
     }
   },
   "test_cases": [
     {
-      "description": "Check an England waste carrier registration route.",
-      "user_prompt": "I transport waste for customers in England and need to register. What should I do?",
+      "description": "Route a current England waste operation through the general preflight.",
+      "user_prompt": "We receive non-hazardous controlled waste at our permitted site in England. What waste-rule route should we check first?",
+      "file_attachment_urls": null,
+      "tools_triggered": "waste_rule_preflight",
+      "expected_output": "Returns a bounded England waste preflight using only supplied facts, identifies relevant permit/exemption/duty-of-care review points and any missing facts, and does not claim Environment Agency approval.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Check carrier registration lifecycle for a business transporting other people's waste.",
+      "user_prompt": "Our England business transports other companies' waste and needs a new waste carrier registration. What should we check?",
       "file_attachment_urls": null,
       "tools_triggered": "carrier_broker_dealer_registration_preflight",
-      "expected_output": "Returns the carrier registration lifecycle route, current reviewed fee route and any missing facts without submitting a registration or independently assigning final legal tier status.",
+      "expected_output": "Returns the bounded carrier/broker/dealer registration route, identifies missing lifecycle facts if any, and does not submit or independently assign regulator approval.",
       "expected_output_url": null
     },
     {
-      "description": "Check Digital Waste Tracking readiness for a permitted receiving site.",
-      "user_prompt": "We operate a permitted waste receiving site in England. Are we ready for the October 2026 Digital Waste Tracking requirement?",
+      "description": "Check receiving-site Digital Waste Tracking readiness.",
+      "user_prompt": "Our permitted receiving site in England accepts controlled waste. Are we ready for Digital Waste Tracking receipt reporting?",
       "file_attachment_urls": null,
       "tools_triggered": "digital_waste_tracking_receipt_readiness",
-      "expected_output": "Checks phase-1 scope, the 1 October 2026 mandatory date and reporting-method readiness, and fails closed if decisive evidence or facts are incomplete.",
+      "expected_output": "Returns a bounded receiving-site readiness assessment, identifies reporting-method or authorization facts that still need confirmation, and does not submit tracking data.",
       "expected_output_url": null
     },
     {
-      "description": "Inspect official-source health.",
-      "user_prompt": "Are the official waste sources used by this service currently healthy or under review?",
-      "file_attachment_urls": null,
-      "tools_triggered": "waste_source_status",
-      "expected_output": "Returns persisted freshness and fail-closed source status without turning source health into a permit, registration or DWT conclusion.",
-      "expected_output_url": null
-    },
-    {
-      "description": "Screen a proposed increase in maximum stored quantity.",
-      "user_prompt": "Our England waste site currently stores up to 10 tonnes and we want to increase that to 20 tonnes. What permit-change impact should we review?",
+      "description": "Screen a proposed operational change for permit review.",
+      "user_prompt": "Our permitted waste site wants to increase its maximum quantity from 10 tonnes to 20 tonnes. What regulatory review should we do?",
       "file_attachment_urls": null,
       "tools_triggered": "permit_change_impact",
-      "expected_output": "Identifies maximum_quantity as a changed field requiring review and does not claim that a variation is or is not legally required.",
+      "expected_output": "Compares current and proposed facts, identifies the changed modeled field for permit or exemption review, and does not conclude that a permit variation is legally required without sufficient evidence.",
       "expected_output_url": null
     },
     {
-      "description": "Explain the connector scope and boundary.",
-      "user_prompt": "What can RegEvidenceHub Waste do, and what decisions does it not make?",
+      "description": "Inspect official evidence health before relying on a preflight.",
+      "user_prompt": "Is the official waste-regulation evidence used by this service currently healthy or under review?",
       "file_attachment_urls": null,
-      "tools_triggered": "waste_rule_info",
-      "expected_output": "Explains the England-only payment-free public AI scope, supported workflows, fail-closed evidence boundary and that it does not issue regulator approvals or legal advice.",
+      "tools_triggered": "waste_source_status",
+      "expected_output": "Returns bounded official-source freshness, availability, and fail-closed state without converting source health into regulator approval.",
       "expected_output_url": null
     }
   ],
   "negative_test_cases": [
     {
-      "description": "Do not invoke for Scotland waste regulation.",
-      "user_prompt": "Tell me which Scottish waste-management licence I need for a site in Glasgow.",
+      "description": "Do not infer hazardous classification or waste code from an incomplete description.",
+      "user_prompt": "This waste smells like solvent and came from a workshop. Tell me its exact hazardous classification and EWC code.",
       "file_attachment_urls": null,
       "tools_triggered": null,
-      "expected_output": "The app should not be invoked because the current product scope is England only.",
+      "expected_output": "The app should not infer an exact hazardous classification or waste code from incomplete facts; it should explain that those determinations are outside the bounded preflight and require authoritative classification inputs or specialist review.",
       "expected_output_url": null
     },
     {
-      "description": "Do not invoke for route planning or fleet logistics.",
-      "user_prompt": "Optimize tomorrow's waste-collection routes for my 20 trucks and assign each driver.",
+      "description": "Do not submit a permit or registration application.",
+      "user_prompt": "Submit a waste environmental permit application to the Environment Agency for my site today.",
       "file_attachment_urls": null,
       "tools_triggered": null,
-      "expected_output": "The app should not be invoked because fleet dispatch and route optimization are outside the regulatory-preflight scope.",
+      "expected_output": "The app should not be invoked to submit or modify a regulatory filing because the public AI edition is read-only and does not perform Environment Agency submissions.",
       "expected_output_url": null
     },
     {
-      "description": "Do not invoke to create or submit waste records.",
-      "user_prompt": "Create and submit all my digital waste tracking records for today's loads.",
+      "description": "Do not provide a definitive legal conclusion from missing permit conditions.",
+      "user_prompt": "Without seeing our permit, guarantee that this new waste activity is lawful and cannot breach any permit condition.",
       "file_attachment_urls": null,
       "tools_triggered": null,
-      "expected_output": "The app should not be invoked because it does not create or submit Digital Waste Tracking or waste-transfer records.",
+      "expected_output": "The app should not guarantee legality or infer unseen permit conditions; it should return a safe boundary or request the missing authoritative facts instead of making a final legal conclusion.",
       "expected_output_url": null
     }
   ]
