@@ -1,3 +1,3 @@
 """UK Waste Rule and Permit Change-Impact Preflight MCP."""
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"

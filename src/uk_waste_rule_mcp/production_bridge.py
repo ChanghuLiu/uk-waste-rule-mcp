@@ -18,6 +18,7 @@ from .engine import (
 )
 from .monitor import check_all_sources, source_health
 from .sources import source_registry
+from .schemas import CarrierRegistrationScenario, DigitalTrackingScenario, PermitChangeScenario, WasteRuleScenario
 
 PUBLIC_ORIGIN = os.getenv("WASTE_PUBLIC_ORIGIN", "https://waste.regevidencehub.com").strip().rstrip("/")
 MCP_URL = os.getenv("WASTE_PUBLIC_MCP_URL", f"{PUBLIC_ORIGIN}/mcp").strip()
@@ -250,25 +251,25 @@ def build_server():
         specs = {
             "waste_rule_preflight": (
                 TOOL_DESCRIPTIONS["waste_rule_preflight"],
-                {"type":"object","additionalProperties":True},
-                {"nation":"England","role":"receiver","activities":["receive_waste"],"receives_controlled_waste":True},
+                WasteRuleScenario.model_json_schema(),
+                {"nation":"England","role":"receiver","activities":["receive_waste"],"site_location":"Leeds","waste_types":["mixed controlled waste"],"hazardous_status":False,"authorisation_status":"permit"},
                 waste_preflight,
             ),
             "waste_carrier_broker_dealer_preflight": (
                 TOOL_DESCRIPTIONS["waste_carrier_broker_dealer_preflight"],
-                {"type":"object","required":["nation","role"],"additionalProperties":True},
+                CarrierRegistrationScenario.model_json_schema(),
                 {"nation":"England","role":"carrier","action":"new_registration","own_waste_only":False},
                 carrier_broker_dealer_registration_preflight,
             ),
             "waste_digital_tracking_readiness": (
                 TOOL_DESCRIPTIONS["waste_digital_tracking_readiness"],
-                {"type":"object","required":["nation"],"additionalProperties":True},
+                DigitalTrackingScenario.model_json_schema(),
                 {"nation":"England","receiving_authorisation":"permit","receives_controlled_waste":True,"reporting_method_ready":True},
                 digital_waste_tracking_receipt_readiness,
             ),
             "waste_permit_change_preflight": (
                 TOOL_DESCRIPTIONS["waste_permit_change_preflight"],
-                {"type":"object","required":["nation","current","proposed"],"additionalProperties":True},
+                PermitChangeScenario.model_json_schema(),
                 {"nation":"England","current":{"maximum_quantity":"10 tonnes"},"proposed":{"maximum_quantity":"20 tonnes"}},
                 impact,
             ),
@@ -429,34 +430,34 @@ def build_server():
     }
     if not enforced:
         @server.tool(name="waste_rule_preflight",description=TOOL_DESCRIPTIONS["waste_rule_preflight"],annotations=annotations("waste_rule_preflight",paid=True))
-        def waste_rule_preflight_tool(scenario: dict[str, Any]) -> dict[str, Any]:
-            return _record("waste_rule_preflight",lambda:waste_preflight(scenario),paid=True)
+        def waste_rule_preflight_tool(scenario: WasteRuleScenario) -> dict[str, Any]:
+            return _record("waste_rule_preflight",lambda:waste_preflight(scenario.model_dump(exclude_none=True)),paid=True)
 
         @server.tool(name="waste_carrier_broker_dealer_preflight",description=TOOL_DESCRIPTIONS["waste_carrier_broker_dealer_preflight"],annotations=annotations("waste_carrier_broker_dealer_preflight",paid=True))
-        def cbd_tool(scenario: dict[str, Any]) -> dict[str, Any]:
-            return _record("waste_carrier_broker_dealer_preflight",lambda:carrier_broker_dealer_registration_preflight(scenario),paid=True)
+        def cbd_tool(scenario: CarrierRegistrationScenario) -> dict[str, Any]:
+            return _record("waste_carrier_broker_dealer_preflight",lambda:carrier_broker_dealer_registration_preflight(scenario.model_dump(exclude_none=True)),paid=True)
 
         @server.tool(name="waste_digital_tracking_readiness",description=TOOL_DESCRIPTIONS["waste_digital_tracking_readiness"],annotations=annotations("waste_digital_tracking_readiness",paid=True))
-        def dwt_tool(scenario: dict[str, Any]) -> dict[str, Any]:
-            return _record("waste_digital_tracking_readiness",lambda:digital_waste_tracking_receipt_readiness(scenario),paid=True)
+        def dwt_tool(scenario: DigitalTrackingScenario) -> dict[str, Any]:
+            return _record("waste_digital_tracking_readiness",lambda:digital_waste_tracking_receipt_readiness(scenario.model_dump(exclude_none=True)),paid=True)
 
         @server.tool(name="waste_permit_change_preflight",description=TOOL_DESCRIPTIONS["waste_permit_change_preflight"],annotations=annotations("waste_permit_change_preflight",paid=True))
-        def permit_tool(scenario: dict[str, Any]) -> dict[str, Any]:
-            return _record("waste_permit_change_preflight",lambda:impact(scenario),paid=True)
+        def permit_tool(scenario: PermitChangeScenario) -> dict[str, Any]:
+            return _record("waste_permit_change_preflight",lambda:impact(scenario.model_dump(exclude_none=True)),paid=True)
     else:
         from .x402_mcp2 import invoke_mcp2_paid_handler
         @server.tool(name="waste_rule_preflight",description=TOOL_DESCRIPTIONS["waste_rule_preflight"],annotations=annotations("waste_rule_preflight",paid=True))
-        def waste_rule_preflight_paid(scenario: dict[str, Any], ctx: Context) -> CallToolResult:
-            return invoke_mcp2_paid_handler(paid_handlers["waste_rule_preflight"],tool_name="waste_rule_preflight",arguments=scenario,ctx=ctx)
+        def waste_rule_preflight_paid(scenario: WasteRuleScenario, ctx: Context) -> CallToolResult:
+            return invoke_mcp2_paid_handler(paid_handlers["waste_rule_preflight"],tool_name="waste_rule_preflight",arguments=scenario.model_dump(exclude_none=True),ctx=ctx)
         @server.tool(name="waste_carrier_broker_dealer_preflight",description=TOOL_DESCRIPTIONS["waste_carrier_broker_dealer_preflight"],annotations=annotations("waste_carrier_broker_dealer_preflight",paid=True))
-        def cbd_paid(scenario: dict[str, Any], ctx: Context) -> CallToolResult:
-            return invoke_mcp2_paid_handler(paid_handlers["waste_carrier_broker_dealer_preflight"],tool_name="waste_carrier_broker_dealer_preflight",arguments=scenario,ctx=ctx)
+        def cbd_paid(scenario: CarrierRegistrationScenario, ctx: Context) -> CallToolResult:
+            return invoke_mcp2_paid_handler(paid_handlers["waste_carrier_broker_dealer_preflight"],tool_name="waste_carrier_broker_dealer_preflight",arguments=scenario.model_dump(exclude_none=True),ctx=ctx)
         @server.tool(name="waste_digital_tracking_readiness",description=TOOL_DESCRIPTIONS["waste_digital_tracking_readiness"],annotations=annotations("waste_digital_tracking_readiness",paid=True))
-        def dwt_paid(scenario: dict[str, Any], ctx: Context) -> CallToolResult:
-            return invoke_mcp2_paid_handler(paid_handlers["waste_digital_tracking_readiness"],tool_name="waste_digital_tracking_readiness",arguments=scenario,ctx=ctx)
+        def dwt_paid(scenario: DigitalTrackingScenario, ctx: Context) -> CallToolResult:
+            return invoke_mcp2_paid_handler(paid_handlers["waste_digital_tracking_readiness"],tool_name="waste_digital_tracking_readiness",arguments=scenario.model_dump(exclude_none=True),ctx=ctx)
         @server.tool(name="waste_permit_change_preflight",description=TOOL_DESCRIPTIONS["waste_permit_change_preflight"],annotations=annotations("waste_permit_change_preflight",paid=True))
-        def permit_paid(scenario: dict[str, Any], ctx: Context) -> CallToolResult:
-            return invoke_mcp2_paid_handler(paid_handlers["waste_permit_change_preflight"],tool_name="waste_permit_change_preflight",arguments=scenario,ctx=ctx)
+        def permit_paid(scenario: PermitChangeScenario, ctx: Context) -> CallToolResult:
+            return invoke_mcp2_paid_handler(paid_handlers["waste_permit_change_preflight"],tool_name="waste_permit_change_preflight",arguments=scenario.model_dump(exclude_none=True),ctx=ctx)
 
     return server
 
