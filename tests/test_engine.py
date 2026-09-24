@@ -146,8 +146,11 @@ def test_source_registry_contains_reviewed_baselines():
     assert len(records) == 8
     reviewed = [record for record in records if record.get("baseline_sha256")]
     pending = [record for record in records if not record.get("baseline_sha256")]
-    assert len(reviewed) == 6
-    assert {record["id"] for record in pending} == {"govuk-cbd-registration", "govuk-waste-environmental-permits"}
+    assert len(reviewed) == 8
+    assert pending == []
+    software = next(record for record in records if record["id"] == "govuk-waste-software-providers")
+    assert software["last_status"] == "CHANGED"
+    assert software["decision_critical"] is False
 
 
 def test_source_registry_path_honours_explicit_override(monkeypatch, tmp_path):
