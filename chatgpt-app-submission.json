@@ -4,7 +4,7 @@
   "app_info": {
     "display_name": "RegEvidenceHub Waste",
     "subtitle": "England waste-rule preflight",
-    "description": "RegEvidenceHub Waste helps businesses, waste carriers, brokers, dealers, receivers and operators in England identify the relevant waste-regulatory route, check bounded official-source health, prepare missing facts, and screen whether a proposed operational change needs permit or exemption review. It is conservative and fail-closed. It does not submit registrations, permits, exemptions or waste records, determine hazardous status or waste codes, guarantee regulator approval, or expose payment and checkout flows on the public AI surface.",
+    "description": "RegEvidenceHub Waste provides conservative, evidence-linked England waste-regulatory preflight for general waste routes, carrier/broker/dealer registration lifecycle, phase-1 Digital Waste Tracking receiving-site readiness and permit-change impact. It is deterministic and fail-closed. It does not submit registrations, permits, exemptions or waste records, determine hazardous status or waste codes, guarantee regulator approval, or expose payment and checkout flows on the public AI surface.",
     "category": "BUSINESS"
   },
   "tools": {
@@ -67,23 +67,47 @@
         "open_world_justification": "Does not contact, update or submit changes to a regulator.",
         "destructive_justification": "Cannot vary, revoke, amend or create any permit, exemption or other regulatory record."
       }
+    },
+    "carrier_broker_dealer_registration_preflight": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Evaluates bounded user-supplied England carrier/broker/dealer lifecycle facts against the reviewed local decision model.",
+        "open_world_justification": "Does not submit a registration, renewal or change to the Environment Agency.",
+        "destructive_justification": "Cannot create, renew, amend or revoke a carrier, broker or dealer registration."
+      }
+    },
+    "digital_waste_tracking_receipt_readiness": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Evaluates bounded receiving-site facts against the reviewed phase-1 Digital Waste Tracking model.",
+        "open_world_justification": "Does not upload waste records or call the reporting API on the user's behalf.",
+        "destructive_justification": "Cannot create, edit or submit Digital Waste Tracking records."
+      }
     }
   },
   "test_cases": [
     {
-      "description": "Route a waste carrier transporting non-hazardous construction waste.",
-      "user_prompt": "I carry non-hazardous construction waste in England. What regulatory route should I check first?",
+      "description": "Check an England waste carrier registration route.",
+      "user_prompt": "I transport waste for customers in England and need to register. What should I do?",
       "file_attachment_urls": null,
-      "tools_triggered": "waste_rule_preflight",
-      "expected_output": "Returns the carrier-registration and duty-of-care review route, identifies any missing facts, and does not claim registration or regulator approval.",
+      "tools_triggered": "carrier_broker_dealer_registration_preflight",
+      "expected_output": "Returns the carrier registration lifecycle route, current reviewed fee route and any missing facts without submitting a registration or independently assigning final legal tier status.",
       "expected_output_url": null
     },
     {
-      "description": "List the supported waste roles and activities.",
-      "user_prompt": "Which England waste roles and activities can this connector check?",
+      "description": "Check Digital Waste Tracking readiness for a permitted receiving site.",
+      "user_prompt": "We operate a permitted waste receiving site in England. Are we ready for the October 2026 Digital Waste Tracking requirement?",
       "file_attachment_urls": null,
-      "tools_triggered": "list_waste_rules",
-      "expected_output": "Returns the bounded local catalogue of modelled roles, activities and routes without inventing unsupported activities.",
+      "tools_triggered": "digital_waste_tracking_receipt_readiness",
+      "expected_output": "Checks phase-1 scope, the 1 October 2026 mandatory date and reporting-method readiness, and fails closed if decisive evidence or facts are incomplete.",
       "expected_output_url": null
     },
     {
@@ -91,7 +115,7 @@
       "user_prompt": "Are the official waste sources used by this service currently healthy or under review?",
       "file_attachment_urls": null,
       "tools_triggered": "waste_source_status",
-      "expected_output": "Returns persisted freshness and fail-closed source status without turning source health into a permit or exemption conclusion.",
+      "expected_output": "Returns persisted freshness and fail-closed source status without turning source health into a permit, registration or DWT conclusion.",
       "expected_output_url": null
     },
     {
@@ -107,7 +131,7 @@
       "user_prompt": "What can RegEvidenceHub Waste do, and what decisions does it not make?",
       "file_attachment_urls": null,
       "tools_triggered": "waste_rule_info",
-      "expected_output": "Explains the England-only payment-free public AI scope, fail-closed evidence boundary and that it does not issue permits, exemptions, registrations or legal advice.",
+      "expected_output": "Explains the England-only payment-free public AI scope, supported workflows, fail-closed evidence boundary and that it does not issue regulator approvals or legal advice.",
       "expected_output_url": null
     }
   ],
