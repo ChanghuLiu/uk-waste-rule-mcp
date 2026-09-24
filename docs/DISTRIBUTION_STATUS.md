@@ -78,3 +78,19 @@ v0.4.0 extended the same `waste_*` naming family to the commercial `/mcp` surfac
 - Smithery: production proxy logs show `SmitheryBot/1.0 (+https://smithery.ai)` POST requests to `/mcp` returning HTTP 200 after publish. Multiple entries in Smithery Recent Releases are release history for the same server, not duplicate public listings.
 - Grok: production proxy logs show `grok-connectors-manager/0.1.0` POST requests to `/ai/mcp` returning HTTP 200/202, and the Grok Plugins UI shows RegEvidenceHub Waste as Added.
 - Glama: `/.well-known/glama.json` now returns HTTP 200 after the ownership challenge deployment. Public connector discovery and seven-tool inspection were already working; final ownership confirmation remains an external UI state.
+
+
+## Glama TDQS checkpoint — 2026-09-24
+
+Ownership is verified and the connector administration pages are available. Current Glama TDQS snapshot:
+
+- Average: 4.5/5 across 6 evaluated tools
+- waste_digital_tracking_readiness: A, 4.1/5
+- waste_permit_change_preflight: A, 4.5/5
+- waste_rule_catalog: A, 4.5/5
+- waste_source_status: A, 4.5/5
+- waste_carrier_broker_dealer_preflight: A, 4.7/5
+- waste_service_info: A, 4.7/5
+- waste_rule_preflight: queued
+
+No further schema/name churn should be made solely for TDQS until the queued tool is evaluated.
