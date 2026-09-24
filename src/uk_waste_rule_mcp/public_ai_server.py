@@ -72,10 +72,9 @@ def build_public_ai_server() -> MCPServer:
     def waste_source_status() -> dict[str,Any]:
         return source_health()
 
-    @server.tool(annotations=_annotations("Run an England waste-rule preflight"), structured_output=True)
+    @server.tool(name="waste_rule_preflight", annotations=_annotations("Run an England waste-rule preflight"), structured_output=True)
     def waste_rule_preflight_tool(scenario: dict[str,Any]) -> dict[str,Any]:
         return waste_preflight(scenario)
-    waste_rule_preflight_tool.name = "waste_rule_preflight"
 
     @server.tool(name="carrier_broker_dealer_registration_preflight", annotations=_annotations("Check waste carrier broker dealer registration"), structured_output=True)
     def carrier_broker_dealer_registration_preflight_tool(scenario: dict[str,Any]) -> dict[str,Any]:
