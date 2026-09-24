@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -69,19 +70,34 @@ SOURCES: list[dict[str, Any]] = [
 ]
 
 
-def source_registry_path() -> Path:
-    """Resolve the registry consistently for source, container and wheel installs."""
-
-    override = os.getenv("WASTE_SOURCE_REGISTRY_PATH")
-    if override:
-        return Path(override).expanduser()
-
+def _seed_registry_candidates() -> list[Path]:
     module_path = Path(__file__).resolve()
-    candidates = [
+    return [
         module_path.parents[2] / "data" / "source_registry.json",
         Path.cwd() / "data" / "source_registry.json",
         Path(sys.prefix) / "share" / "uk-waste-rule-mcp" / "source_registry.json",
     ]
+
+
+def source_registry_path() -> Path:
+    """Resolve durable registry state and seed a new explicit path fail-safely."""
+
+    override = os.getenv("WASTE_SOURCE_REGISTRY_PATH")
+    candidates = _seed_registry_candidates()
+    if override:
+        target = Path(override).expanduser()
+        if not target.is_file():
+            seed = next((candidate for candidate in candidates if candidate.is_file()), None)
+            if seed is not None and seed.resolve() != target.resolve():
+                try:
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(seed, target)
+                except OSError:
+                    # Leave the missing explicit path visible to source_registry(),
+                    # which then fails closed rather than silently inventing state.
+                    pass
+        return target
+
     for candidate in candidates:
         if candidate.is_file():
             return candidate

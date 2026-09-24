@@ -27,3 +27,5 @@ jobs:
         run: python -m compileall -q src
       - name: Test
         run: pytest -q
+      - name: Build production Docker image
+        run: docker build -t uk-waste-rule-mcp:ci .
