@@ -4,7 +4,7 @@ Updated: 2026-09-24
 
 ## Production
 
-- Version: 0.4.0
+- Version: 0.4.1
 - Canonical commercial MCP: https://waste.regevidencehub.com/mcp
 - Payment-free public AI MCP: https://waste.regevidencehub.com/ai/mcp
 - OpenAI MCP alias: https://waste.regevidencehub.com/openai/mcp
@@ -19,12 +19,12 @@ Updated: 2026-09-24
 
 | Channel | Status | Current gate |
 | --- | --- | --- |
-| Official MCP Registry | DONE | v0.4.0 metadata prepared and verified from `server.json` |
+| Official MCP Registry | DONE | v0.4.1 published and verified from `server.json` |
 | OpenAI Plugins | NEEDS_RESYNC_AND_DEMO | Draft/domain/private MCP app are working; v0.3.0 renamed the public tools, so Scan Tools/test tool names must be refreshed before final Submit; reviewer-accessible demo recording URL is still required |
 | Glama | LISTED_ONLINE_PENDING_CLAIM | Public connector exists, server responds, and 7 tools are visible. HTTP ownership challenge is deployed at `/.well-known/glama.json`; ownership confirmation and post-v0.3.0 TDQS rescore are pending |
-| Smithery | PUBLISHED_NEEDS_RESCORE | Listing `liuchanghu2018/uk-waste-rule-mcp` is published; SmitheryBot successfully inspected commercial `/mcp`; v0.4.0 commercial naming/metadata cleanup is being deployed for a quality rescore |
+| Smithery | PUBLISHED_NEEDS_RESCORE | Listing `liuchanghu2018/uk-waste-rule-mcp` is published. Commercial `/mcp` is healthy with 9 tools; v0.4.1 adds strict field-level schemas for the four paid decision tools. One new Smithery release is needed to refresh the score from the prior 58 baseline. |
 | Grok | READY_TO_CONNECT | Branded payment-free public-AI MCP is ready; connector add/verification is pending |
-| PayAI | PARTIAL | x402 compatibility and production smoke pass; last Bazaar watch on 2026-09-24 16:13 UTC returned `indexed=false` |
+| PayAI | PARTIAL | x402 compatibility and production smoke pass; latest Bazaar watch on 2026-09-24 19:23 UTC returned `indexed=false` |
 
 ## Public-AI v0.3.0 tools
 
@@ -36,7 +36,7 @@ Updated: 2026-09-24
 6. `waste_digital_tracking_readiness`
 7. `waste_permit_change_preflight`
 
-v0.4.0 extends the same `waste_*` naming family to the commercial `/mcp` surface. Prices and x402 settlement behavior are unchanged.
+v0.4.0 extended the same `waste_*` naming family to the commercial `/mcp` surface. v0.4.1 adds strict shared field-level input schemas to the paid commercial decision tools. Prices and x402 settlement behavior are unchanged.
 
 ## OpenAI current state
 
@@ -53,7 +53,7 @@ v0.4.0 extends the same `waste_*` naming family to the commercial `/mcp` surface
 - Server health shown by Glama: responding
 - Tool count: 7
 - Pre-v0.3.0 TDQS: D / 1.5
-- v0.4.0 retains improved routing descriptions, strict input schemas and naming consistency to target the CQC-level agent-selection quality
+- v0.4.1 retains improved routing descriptions and naming consistency and adds strict shared field-level schemas to target CQC-level agent-selection quality
 - Ownership challenge token is served from `https://waste.regevidencehub.com/.well-known/glama.json`
 - Pending: ownership confirmation and Glama re-score
 
@@ -64,13 +64,12 @@ v0.4.0 extends the same `waste_*` naming family to the commercial `/mcp` surface
 - MCP Server URL: `https://waste.regevidencehub.com/mcp`
 - Recommended Server ID: `uk-waste-rule-mcp`
 - Repo metadata: `smithery.yaml` committed and CI-validated
-- Listing published; next step is re-publish/rescore after v0.4.0 reaches production and then add the final Smithery backlink to discovery metadata
+- Listing published at `https://smithery.ai/servers/liuchanghu2018/uk-waste-rule-mcp`; prior quality baseline is 58. v0.4.1 is now production-ready with stricter schemas; publish exactly one new Smithery release to refresh metadata/score.
 
 ## Next controllable work
 
 1. Confirm Glama ownership once its HTTP challenge is checked/rechecked.
-2. Complete the Smithery publish form and capture the final listing slug.
-3. Add the final Smithery backlink to production and verify crawler discovery.
-4. Add/verify the Grok connector.
-5. Re-check PayAI Bazaar indexing.
-6. Return to OpenAI: re-scan v0.3.0 tools, refresh test tool names, attach demo URL, then Submit.
+2. Publish exactly one new Smithery release for v0.4.1, then record the refreshed quality score.
+3. Add/verify the Grok connector.
+4. Re-check PayAI Bazaar indexing after external propagation.
+5. Return to OpenAI: re-scan current 7 public-AI tools, refresh test tool names if needed, attach demo URL, then Submit.
