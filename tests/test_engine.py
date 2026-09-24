@@ -146,8 +146,11 @@ def test_source_registry_contains_reviewed_baselines():
     assert len(records) == 8
     reviewed = [record for record in records if record.get("baseline_sha256")]
     pending = [record for record in records if not record.get("baseline_sha256")]
-    assert len(reviewed) == 6
-    assert {record["id"] for record in pending} == {"govuk-cbd-registration", "govuk-waste-environmental-permits"}
+    assert len(reviewed) == 8
+    assert pending == []
+    software = next(record for record in records if record["id"] == "govuk-waste-software-providers")
+    assert software["last_status"] == "CHANGED"
+    assert software["decision_critical"] is False
 
 
 def test_source_registry_path_honours_explicit_override(monkeypatch, tmp_path):
@@ -215,3 +218,44 @@ def test_dwt_exemption_is_not_claimed_as_phase1_mandatory(monkeypatch):
     })
     assert result["decision"]["phase1_in_scope"] is False
     assert result["decision"]["requirement"] == "NOT_INCLUDED_IN_PHASE_1_CURRENT_MODEL"
+
+
+def test_informational_source_drift_does_not_block_global_decision_health():
+    from datetime import datetime, timezone
+    from uk_waste_rule_mcp.monitor import source_health
+    now = datetime(2026, 9, 24, 14, 0, tzinfo=timezone.utc)
+    records = [
+        {
+            "id": "critical",
+            "baseline_sha256": "abc",
+            "last_status": "UNCHANGED",
+            "last_checked_at": "2026-09-24T13:55:00Z",
+            "decision_critical": True,
+        },
+        {
+            "id": "informational",
+            "baseline_sha256": "old",
+            "last_status": "CHANGED",
+            "last_checked_at": "2026-09-24T13:55:00Z",
+            "decision_critical": False,
+        },
+    ]
+    health = source_health(records, now=now)
+    assert health["decision_usable"] is True
+    assert health["status"] == "READY_WITH_ADVISORIES"
+    assert health["blocking_source_count"] == 0
+    assert health["advisory_source_count"] == 1
+
+
+def test_explicit_source_promotion_updates_only_reviewed_ids():
+    from datetime import datetime, timezone
+    from uk_waste_rule_mcp.monitor import promote_source_baselines
+    records = [
+        {"id": "a", "last_http_status": 200, "last_observed_sha256": "new-a", "last_status": "MISSING_BASELINE"},
+        {"id": "b", "last_http_status": 200, "last_observed_sha256": "new-b", "last_status": "CHANGED", "baseline_sha256": "old-b"},
+    ]
+    promoted = promote_source_baselines(records, {"a"}, now=datetime(2026, 9, 24, 14, 0, tzinfo=timezone.utc))
+    assert promoted[0]["baseline_sha256"] == "new-a"
+    assert promoted[0]["last_status"] == "UNCHANGED"
+    assert promoted[1]["baseline_sha256"] == "old-b"
+    assert promoted[1]["last_status"] == "CHANGED"

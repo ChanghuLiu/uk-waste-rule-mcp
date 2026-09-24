@@ -125,16 +125,20 @@ def source_health(sources: list[dict[str, Any]] | None = None, *, now: datetime 
         last_status = source.get("last_status", "MISSING_BASELINE")
         stale = age is None or age > max_age
         usable = bool(source.get("baseline_sha256")) and last_status == "UNCHANGED" and not stale
-        record = {"id": source.get("id"), "last_status": last_status, "age_hours": age, "max_age_hours": max_age, "stale": stale, "decision_usable": usable, "last_error": source.get("last_error")}
+        decision_critical = bool(source.get("decision_critical", True))
+        record = {"id": source.get("id"), "last_status": last_status, "age_hours": age, "max_age_hours": max_age, "stale": stale, "decision_critical": decision_critical, "decision_usable": usable, "last_error": source.get("last_error")}
         output.append(record)
-        if not usable:
+        if decision_critical and not usable:
             blocking.append(record)
+    advisories = [record for record in output if not record["decision_critical"] and not record["decision_usable"]]
     return {
-        "status": "READY" if not blocking else "REVIEW_REQUIRED",
+        "status": "REVIEW_REQUIRED" if blocking else ("READY_WITH_ADVISORIES" if advisories else "READY"),
         "source_count": len(output),
         "decision_usable": not blocking,
         "blocking_source_count": len(blocking),
         "blocking_sources": blocking,
+        "advisory_source_count": len(advisories),
+        "advisory_sources": advisories,
         "sources": output,
     }
 
@@ -157,6 +161,30 @@ def establish_baselines(sources: list[dict[str, Any]], *, now: datetime | None =
     return result
 
 
+def promote_source_baselines(sources: list[dict[str, Any]], source_ids: set[str], *, now: datetime | None = None) -> list[dict[str, Any]]:
+    """Promote only explicitly reviewed source IDs to their latest successful fingerprint."""
+
+    captured_at = _now_iso(now)
+    known = {str(source.get("id")) for source in sources}
+    missing = sorted(source_ids - known)
+    if missing:
+        raise ValueError(f"Unknown source IDs: {', '.join(missing)}")
+    result: list[dict[str, Any]] = []
+    for source in sources:
+        if source.get("id") not in source_ids:
+            result.append(source)
+            continue
+        observed = source.get("last_observed_sha256")
+        if source.get("last_http_status") != 200 or not observed or source.get("last_status") == "FETCH_ERROR":
+            raise ValueError(f"Cannot promote source without a successful live fingerprint: {source.get('id')}")
+        updated = dict(source)
+        updated["baseline_sha256"] = observed
+        updated["baseline_captured_at"] = captured_at
+        updated["last_status"] = "UNCHANGED"
+        result.append(updated)
+    return result
+
+
 def write_registry(path: str | Path, sources: list[dict[str, Any]]) -> None:
     """Atomically write monitoring records to the checked-in registry."""
 
@@ -171,15 +199,21 @@ def write_registry(path: str | Path, sources: list[dict[str, Any]]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Check official Waste MCP sources without changing reviewed baselines.")
     parser.add_argument("--write", action="store_true", help="Persist observed status and fingerprints; never changes baseline_sha256.")
-    parser.add_argument("--establish-baseline", action="store_true", help="Explicitly establish baselines only when every source fetch succeeds.")
+    parser.add_argument("--establish-baseline", action="store_true", help="Establish missing baselines only when no existing reviewed source changed.")
+    parser.add_argument("--promote-source", action="append", default=[], help="Explicitly promote a manually reviewed source ID to its latest successful fingerprint. Repeat for multiple IDs.")
     parser.add_argument("--timeout", type=float, default=20.0)
     args = parser.parse_args()
     checked = check_all_sources(timeout=args.timeout)
     if args.establish_baseline:
-        if any(source.get("last_status") != "UNCHANGED" for source in checked):
-            raise SystemExit("Refusing to establish baseline: one or more source fetches did not succeed.")
+        if any(source.get("last_status") in {"CHANGED", "FETCH_ERROR"} for source in checked):
+            raise SystemExit("Refusing to establish baselines: an existing source changed or a fetch failed.")
         checked = establish_baselines(checked)
-    if args.write or args.establish_baseline:
+    if args.promote_source:
+        try:
+            checked = promote_source_baselines(checked, set(args.promote_source))
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+    if args.write or args.establish_baseline or args.promote_source:
         write_registry(source_registry_path(), checked)
     print(json.dumps(source_health(checked), indent=2, ensure_ascii=False))
 
