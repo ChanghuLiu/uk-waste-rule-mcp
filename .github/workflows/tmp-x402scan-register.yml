@@ -1,4 +1,4 @@
-name: Temporary x402scan Taxi registration
+name: Temporary x402scan CQC and Premises registration
 
 on:
   push:
@@ -13,16 +13,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Register Taxi through x402scan public tRPC
+      - name: Register CQC and Premises through x402scan public tRPC
         shell: bash
         run: |
           set -euo pipefail
-          body='{"json":{"origin":"https://taxi.regevidencehub.com"}}'
-          status="$(curl -sS             -o /tmp/response.json             -w '%{http_code}'             -X POST 'https://www.x402scan.com/api/trpc/public.resources.registerFromOrigin'             -H 'Content-Type: application/json'             -H 'x-trpc-source: nextjs-react'             --data-binary "$body")"
-          cat /tmp/response.json
-          echo
-          echo "HTTP_STATUS=$status"
-          case "$status" in
-            2??) ;;
-            *) exit 1 ;;
-          esac
+          register() {
+            name="$1"
+            origin="$2"
+            echo "=== $name ==="
+            body="$(jq -nc --arg origin "$origin" '{json:{origin:$origin}}')"
+            status="$(curl -sS               -o "/tmp/${name}.json"               -w '%{http_code}'               -X POST 'https://www.x402scan.com/api/trpc/public.resources.registerFromOrigin'               -H 'Content-Type: application/json'               -H 'x-trpc-source: nextjs-react'               --data-binary "$body")"
+            cat "/tmp/${name}.json"
+            echo
+            echo "HTTP_STATUS=$status"
+            case "$status" in
+              2??) ;;
+              *) exit 1 ;;
+            esac
+          }
+          register cqc 'https://cqc.regevidencehub.com'
+          register premises 'https://premises.regevidencehub.com'
