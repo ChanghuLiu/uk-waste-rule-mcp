@@ -1,0 +1,28 @@
+name: Temporary x402scan Taxi registration
+
+on:
+  push:
+    branches:
+      - ops/x402scan-register-20260925
+
+permissions:
+  contents: read
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Register Taxi through x402scan public tRPC
+        shell: bash
+        run: |
+          set -euo pipefail
+          body='{"json":{"origin":"https://taxi.regevidencehub.com"}}'
+          status="$(curl -sS             -o /tmp/response.json             -w '%{http_code}'             -X POST 'https://www.x402scan.com/api/trpc/public.resources.registerFromOrigin'             -H 'Content-Type: application/json'             -H 'x-trpc-source: nextjs-react'             --data-binary "$body")"
+          cat /tmp/response.json
+          echo
+          echo "HTTP_STATUS=$status"
+          case "$status" in
+            2??) ;;
+            *) exit 1 ;;
+          esac
