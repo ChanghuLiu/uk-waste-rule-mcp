@@ -52,3 +52,10 @@ def test_unpaid_waste_http_route_stops_at_x402(monkeypatch):
     assert response.status_code == 402
     assert executed["value"] is False
     assert response.headers.get("payment-required")
+
+
+def test_permit_discovery_schema_has_no_local_defs_or_refs():
+    schema = SPECS["waste_permit_change_preflight"]["schema"]
+    serialized = str(schema)
+    assert "$defs" not in serialized
+    assert "$ref" not in serialized
