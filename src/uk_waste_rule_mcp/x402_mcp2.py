@@ -45,9 +45,11 @@ class MCP2X402Gate:
         from x402 import x402ResourceServerSync
         from x402.http import FacilitatorConfig, HTTPFacilitatorClientSync
         from x402.mechanisms.evm.exact import ExactEvmServerScheme
+        from x402.extensions.bazaar import bazaar_resource_server_extension
         facilitator = HTTPFacilitatorClientSync(FacilitatorConfig(url=self.facilitator_url))
         self.resource_server = x402ResourceServerSync(facilitator)
         self.resource_server.register(self.network, ExactEvmServerScheme())
+        self.resource_server.register_extension(bazaar_resource_server_extension)
         self.resource_server.initialize()
 
     def build(self, spec: PaidToolSpec, execute: Callable[[dict[str, Any]], dict[str, Any]]):
