@@ -211,6 +211,8 @@ def _openapi_document() -> dict[str, Any]:
         "/llms.txt":{"LLM-readable capability guide"},
     }.items():
         paths[path] = {"get" if path != "/mcp" else "post":{"summary":next(iter(summary)),"responses":{"200":{"description":"OK"}}}}
+    from .http_x402 import paid_openapi_paths
+    paths.update(paid_openapi_paths())
     return {
         "openapi":"3.1.0",
         "info":{"title":"RegEvidenceHub Waste","version":__version__,"description":"Evidence-linked England waste regulatory decision service."},
@@ -485,6 +487,8 @@ def build_server():
         def permit_paid(scenario: PermitChangeScenario, ctx: Context) -> CallToolResult:
             return invoke_mcp2_paid_handler(paid_handlers["waste_permit_change_preflight"],tool_name="waste_permit_change_preflight",arguments=scenario.model_dump(exclude_none=True),ctx=ctx)
 
+    from .http_x402 import install_http_routes
+    install_http_routes(server)
     return server
 
 def safe_mcp_surface_mounts(public_ai_app: object) -> list[object]:
@@ -525,6 +529,8 @@ def main() -> None:
         Mount("/",app=commercial_app),
     ],lifespan=lifespan)
     app=DiscoveryObservabilityASGI(app)
+    from .http_x402 import wrap_http_x402
+    app=wrap_http_x402(app)
     uvicorn.run(app,host=host,port=port)
 
 if __name__=="__main__":
