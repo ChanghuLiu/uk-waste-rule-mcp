@@ -1,4 +1,4 @@
-name: Temporary x402scan CQC and Premises registration
+name: Temporary x402scan Sponsor and Waste discovery check
 
 on:
   push:
@@ -9,27 +9,21 @@ permissions:
   contents: read
 
 jobs:
-  register:
+  check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Register CQC and Premises through x402scan public tRPC
+      - name: Check Sponsor and Waste discovery
         shell: bash
         run: |
           set -euo pipefail
-          register() {
+          check() {
             name="$1"
             origin="$2"
             echo "=== $name ==="
-            body="$(jq -nc --arg origin "$origin" '{json:{origin:$origin}}')"
-            status="$(curl -sS               -o "/tmp/${name}.json"               -w '%{http_code}'               -X POST 'https://www.x402scan.com/api/trpc/public.resources.registerFromOrigin'               -H 'Content-Type: application/json'               -H 'x-trpc-source: nextjs-react'               --data-binary "$body")"
-            cat "/tmp/${name}.json"
+            body="$(jq -nc --arg origin "$origin" '{json:{origin:$origin,bustCache:true}}')"
+            curl -sS               -X POST 'https://www.x402scan.com/api/trpc/public.resources.checkDiscovery'               -H 'Content-Type: application/json'               -H 'x-trpc-source: nextjs-react'               --data-binary "$body"
             echo
-            echo "HTTP_STATUS=$status"
-            case "$status" in
-              2??) ;;
-              *) exit 1 ;;
-            esac
           }
-          register cqc 'https://cqc.regevidencehub.com'
-          register premises 'https://premises.regevidencehub.com'
+          check sponsor 'https://works.regevidencehub.com'
+          check waste 'https://waste.regevidencehub.com'
