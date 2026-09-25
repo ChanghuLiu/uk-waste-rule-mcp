@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from uk_waste_rule_mcp.production_bridge import _public_x402_document
 from uk_waste_rule_mcp.x402_mcp2 import BAZAAR_TAGS, BAZAAR_SERVICE_NAME, DEFAULT_PUBLIC_MCP_URL
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,3 +35,23 @@ def test_smithery_remote_points_to_commercial_branded_mcp():
     assert "ai/mcp" not in raw
     assert "environment-agency" in raw
     assert "x402" in raw
+
+
+def test_public_x402_document_exposes_agent_discovery_identity():
+    class Gate:
+        network = "eip155:8453"
+        pay_to = "0x1111111111111111111111111111111111111111"
+
+    doc = _public_x402_document(Gate())
+    assert doc["x402Version"] == 2
+    assert doc["type"] == "mcp"
+    assert doc["resource"] == "https://waste.regevidencehub.com/mcp"
+    assert doc["serviceName"] == "RegEvidenceHub Waste"
+    assert doc["payTo"] == Gate.pay_to
+    assert "waste" in doc["tags"]
+    assert {item["name"] for item in doc["paidTools"]} == {
+        "waste_rule_preflight",
+        "waste_carrier_broker_dealer_preflight",
+        "waste_digital_tracking_readiness",
+        "waste_permit_change_preflight",
+    }
