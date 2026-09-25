@@ -26,6 +26,42 @@ CARRIER_PATH = "/api/v1/waste-carrier-broker-dealer-preflight"
 DWT_PATH = "/api/v1/waste-digital-tracking-readiness"
 PERMIT_PATH = "/api/v1/waste-permit-change-preflight"
 
+def _inline_local_refs(schema: dict[str, Any]) -> dict[str, Any]:
+    """Expand local #/$defs references for discovery consumers that reject $defs."""
+    definitions = schema.get("$defs", {})
+
+    def resolve(node: Any) -> Any:
+        if isinstance(node, list):
+            return [resolve(item) for item in node]
+        if not isinstance(node, dict):
+            return node
+
+        ref = node.get("$ref")
+        if isinstance(ref, str) and ref.startswith("#/$defs/"):
+            key = ref.removeprefix("#/$defs/")
+            target = definitions.get(key)
+            if isinstance(target, dict):
+                expanded = resolve(target)
+                extras = {
+                    k: resolve(v)
+                    for k, v in node.items()
+                    if k != "$ref"
+                }
+                if isinstance(expanded, dict):
+                    return {**expanded, **extras}
+
+        return {
+            k: resolve(v)
+            for k, v in node.items()
+            if k != "$defs"
+        }
+
+    resolved = resolve(schema)
+    if not isinstance(resolved, dict):
+        raise TypeError("Resolved schema must be an object")
+    return resolved
+
+
 SPECS: dict[str, dict[str, Any]] = {
     "waste_rule_preflight": {
         "path": RULE_PATH,
@@ -110,7 +146,7 @@ SPECS: dict[str, dict[str, Any]] = {
     "waste_permit_change_preflight": {
         "path": PERMIT_PATH,
         "price": "$0.03",
-        "schema": PermitChangeScenario.model_json_schema(),
+        "schema": _inline_local_refs(PermitChangeScenario.model_json_schema()),
         "example": {
             "nation": "England",
             "current": {"maximum_quantity": "10 tonnes"},
