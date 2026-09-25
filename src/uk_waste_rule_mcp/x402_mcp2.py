@@ -19,6 +19,7 @@ class PaidToolSpec:
     description: str
     input_schema: dict[str, Any]
     example: dict[str, Any] | None = None
+    output_example: dict[str, Any] | None = None
 
 def _payment_mode() -> str:
     mode = os.getenv("WASTE_PAYMENT_MODE", "paid").strip().lower()
@@ -64,7 +65,7 @@ class MCP2X402Gate:
             return maintenance_handler
         if self.resource_server is None:
             raise RuntimeError("x402 resource server unavailable")
-        from x402.extensions.bazaar import DeclareMcpDiscoveryConfig, declare_mcp_discovery_extension
+        from x402.extensions.bazaar import DeclareMcpDiscoveryConfig, OutputConfig, declare_mcp_discovery_extension
         from x402.mcp import ResourceInfo, SyncPaymentWrapperConfig, create_payment_wrapper_sync
         from x402.schemas import ResourceConfig
         accepts = self.resource_server.build_payment_requirements(ResourceConfig(
@@ -73,6 +74,7 @@ class MCP2X402Gate:
         extensions = declare_mcp_discovery_extension(DeclareMcpDiscoveryConfig(
             tool_name=spec.name, description=spec.description, transport="streamable-http",
             input_schema=spec.input_schema, example=spec.example,
+            output=OutputConfig(example=spec.output_example) if spec.output_example is not None else None,
         ))
         wrapper = create_payment_wrapper_sync(self.resource_server, SyncPaymentWrapperConfig(
             accepts=accepts,

@@ -263,32 +263,36 @@ def build_server():
                 TOOL_DESCRIPTIONS["waste_rule_preflight"],
                 WasteRuleScenario.model_json_schema(),
                 {"nation":"England","role":"receiver","activities":["receive_waste"],"site_location":"Leeds","waste_types":["mixed controlled waste"],"hazardous_status":False,"authorisation_status":"permit"},
+                {"product":"UK Waste Rule & Permit Change-Impact MCP","schema_version":"0.1","decision":{"route":"PERMIT_OR_EXEMPTION_AND_DIGITAL_TRACKING_REVIEW","status":"SCREENING_COMPLETE_REVIEW_REQUIRED","deterministic":True}},
                 waste_preflight,
             ),
             "waste_carrier_broker_dealer_preflight": (
                 TOOL_DESCRIPTIONS["waste_carrier_broker_dealer_preflight"],
                 CarrierRegistrationScenario.model_json_schema(),
                 {"nation":"England","role":"carrier","action":"new_registration","own_waste_only":False},
+                {"product":"UK Waste Rule & Permit Change-Impact MCP","schema_version":"0.2","decision":{"route":"CARRIER_BROKER_DEALER_REGISTRATION","status":"SCREENING_COMPLETE","deterministic":True,"registration_required":True,"role":"carrier","action":"NEW_REGISTRATION","fee_route":"STANDARD_REGISTRATION_FEE_ROUTE"}},
                 carrier_broker_dealer_registration_preflight,
             ),
             "waste_digital_tracking_readiness": (
                 TOOL_DESCRIPTIONS["waste_digital_tracking_readiness"],
                 DigitalTrackingScenario.model_json_schema(),
                 {"nation":"England","receiving_authorisation":"permit","receives_controlled_waste":True,"reporting_method_ready":True},
+                {"product":"UK Waste Rule & Permit Change-Impact MCP","schema_version":"0.2","decision":{"route":"DIGITAL_WASTE_TRACKING_RECEIPT_READINESS","status":"SCREENING_COMPLETE","deterministic":True,"phase1_in_scope":True}},
                 digital_waste_tracking_receipt_readiness,
             ),
             "waste_permit_change_preflight": (
                 TOOL_DESCRIPTIONS["waste_permit_change_preflight"],
                 PermitChangeScenario.model_json_schema(),
                 {"nation":"England","current":{"maximum_quantity":"10 tonnes"},"proposed":{"maximum_quantity":"20 tonnes"}},
+                {"product":"UK Waste Rule & Permit Change-Impact MCP","schema_version":"0.1","decision":{"route":"PERMIT_CHANGE_IMPACT","status":"REVIEW_REQUIRED","deterministic":True,"changed_fields":["maximum_quantity"]}},
                 impact,
             ),
         }
-        for name, (description, schema, example, executor) in specs.items():
+        for name, (description, schema, example, output_example, executor) in specs.items():
             def make_exec(fn, tool):
                 return lambda args: _record(tool, lambda: fn(args), paid=True)
             paid_handlers[name] = gate.build(
-                PaidToolSpec(name=name,price=prices[name],description=description,input_schema=schema,example=example),
+                PaidToolSpec(name=name,price=prices[name],description=description,input_schema=schema,example=example,output_example=output_example),
                 make_exec(executor,name),
             )
 
