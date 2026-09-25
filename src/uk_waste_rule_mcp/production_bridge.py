@@ -146,10 +146,15 @@ def service_info(x402: Any = None) -> dict[str, Any]:
 
 def _public_x402_document(gate: Any = None) -> dict[str, Any]:
     network = getattr(gate, "network", os.getenv("WASTE_X402_NETWORK", "eip155:8453"))
-    return {
+    doc = {
         "version": 1,
+        "x402Version": 2,
         "service": REGISTRY_NAME,
+        "serviceName": "RegEvidenceHub Waste",
         "title": "RegEvidenceHub Waste",
+        "description": "Evidence-linked deterministic England waste-regulatory preflight for agents and workflow automation.",
+        "type": "mcp",
+        "resource": MCP_URL,
         "mcp": MCP_URL,
         "paymentEnforced": payment_enforced(),
         "network": network,
@@ -157,9 +162,14 @@ def _public_x402_document(gate: Any = None) -> dict[str, Any]:
         "asset": BASE_USDC,
         "assetSymbol": "USDC",
         "facilitator": os.getenv("WASTE_X402_FACILITATOR_URL", "https://facilitator.payai.network"),
+        "tags": ["waste","england","permit","carrier","compliance"],
         "freeTools": ["waste_service_info","waste_rule_catalog","waste_source_status","waste_source_audit","waste_source_registry"],
         "paidTools": [{"name": name, "priceUSDC": price.lstrip("$")} for name, price in PRICES.items()],
     }
+    pay_to = getattr(gate, "pay_to", "") if gate is not None else ""
+    if pay_to:
+        doc["payTo"] = pay_to
+    return doc
 
 def _agent_card() -> dict[str, Any]:
     return {
@@ -290,7 +300,10 @@ def build_server():
     async def landing(request):
         discovery(request, "/")
         return HTMLResponse(
-            f"""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+            f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Agent-native, evidence-linked England waste regulatory preflight with x402-paid MCP decision tools for waste routing, carrier registration, Digital Waste Tracking readiness and permit-change checks.">
+<meta name="robots" content="index,follow"><link rel="canonical" href="{PUBLIC_ORIGIN}/">
+<meta property="og:title" content="RegEvidenceHub Waste"><meta property="og:description" content="England waste regulatory preflight for agents, with evidence health and x402-paid decision tools."><meta property="og:url" content="{PUBLIC_ORIGIN}/">
 <title>RegEvidenceHub Waste</title></head><body><main style="font-family:system-ui;max-width:900px;margin:48px auto;padding:0 22px;line-height:1.55">
 <h1>RegEvidenceHub Waste</h1><p>Agent-native, evidence-linked England waste regulatory preflight.</p>
 <h2>Primary workflows</h2><ul>
@@ -335,7 +348,14 @@ def build_server():
     @server.custom_route("/pricing", methods=["GET"], include_in_schema=False)
     async def pricing(_request):
         rows="".join(f"<li><code>{name}</code> — {price} USDC</li>" for name,price in prices.items())
-        return HTMLResponse(f"<html><body><h1>RegEvidenceHub Waste pricing</h1><ul>{rows}</ul><p>x402 v2 on Base mainnet when payment is enabled.</p></body></html>")
+        return HTMLResponse(f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="RegEvidenceHub Waste x402 pricing for England waste regulatory MCP decision tools."><meta name="robots" content="index,follow">
+<link rel="canonical" href="{PUBLIC_ORIGIN}/pricing"><title>Pricing — RegEvidenceHub Waste</title></head>
+<body><main style="font-family:system-ui;max-width:900px;margin:48px auto;padding:0 22px;line-height:1.55">
+<h1>RegEvidenceHub Waste pricing</h1><p>Machine-to-machine pricing for the commercial MCP endpoint <code>{MCP_URL}</code>.</p>
+<ul>{rows}</ul><p>Protocol: x402 v2 · Network: Base mainnet · Asset: USDC.</p>
+<p><a href="/.well-known/x402">x402 discovery metadata</a> · <a href="/.well-known/agent-card.json">agent card</a> · <a href="/llms.txt">llms.txt</a></p>
+</main></body></html>""")
 
     for _path, _target in (("/privacy","/plugin/privacy"),("/terms","/plugin/terms"),("/support","/plugin/support")):
         async def redirect_policy(_request, target=_target):
@@ -358,8 +378,10 @@ def build_server():
         return PlainTextResponse(
             f"# RegEvidenceHub Waste\nJurisdiction: England\nMCP: {MCP_URL}\nPublic AI MCP: {PUBLIC_ORIGIN}/ai/mcp\n"
             "Use for waste carrier/broker/dealer registration, Digital Waste Tracking receiving-site readiness, waste permit/exemption routing and permit-change impact.\n"
-            "Free: waste_service_info, waste_rule_catalog, waste_source_status, waste_source_audit, waste_source_registry. Paid commercial decisions use x402 v2.\n"
-            "Fail closed on stale, changed, unavailable, unreviewed or incomplete official evidence. Not regulator approval or legal advice.\n"
+            "Free: waste_service_info, waste_rule_catalog, waste_source_status, waste_source_audit, waste_source_registry.\n"
+            "Paid: waste_rule_preflight $0.02 USDC; waste_carrier_broker_dealer_preflight $0.02 USDC; waste_digital_tracking_readiness $0.03 USDC; waste_permit_change_preflight $0.03 USDC.\n"
+            f"x402 discovery: {PUBLIC_ORIGIN}/.well-known/x402\nAgent card: {PUBLIC_ORIGIN}/.well-known/agent-card.json\n"
+            "Paid commercial decisions use x402 v2 on Base mainnet. Fail closed on stale, changed, unavailable, unreviewed or incomplete official evidence. Not regulator approval or legal advice.\n"
         )
 
     @server.custom_route("/.well-known/mcp.json", methods=["GET"], include_in_schema=False)
