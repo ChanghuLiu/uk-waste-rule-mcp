@@ -195,6 +195,13 @@ _PAYMENT_HEADER_NAMES = {
 }
 
 
+def _http_owner_test_marker(user_agent: str) -> str | None:
+    ua = (user_agent or "").strip().lower()
+    if ua.startswith("waste-owned-paid-smoke/") or ua.startswith("github-production-smoke/"):
+        return "portfolio_owner_probe_v21"
+    return None
+
+
 def _http_source_bucket(user_agent: str) -> str:
     """Map only strongly recognizable x402 monitor clients to a bounded source.
 
@@ -232,6 +239,10 @@ class HttpX402TelemetryASGI:
         proof_present = any(name in headers for name in _PAYMENT_HEADER_NAMES)
         user_agent = headers.get(b"user-agent", b"").decode("utf-8", errors="ignore")
         source_bucket = _http_source_bucket(user_agent)
+        owner_test_marker = _http_owner_test_marker(user_agent)
+        meta = {"source_context": source_bucket}
+        if owner_test_marker:
+            meta["owner_test_marker"] = owner_test_marker
         status_code: int | None = None
 
         async def observed_send(message: dict[str, Any]) -> None:
@@ -248,7 +259,7 @@ class HttpX402TelemetryASGI:
                     tool_name,
                     "payment_error",
                     str(settings()["network"]),
-                    meta={"source_context": source_bucket},
+                    meta=meta,
                 )
             raise
 
@@ -257,21 +268,21 @@ class HttpX402TelemetryASGI:
                 tool_name,
                 "challenge",
                 str(settings()["network"]),
-                meta={"source_context": source_bucket},
+                meta=meta,
             )
         elif status_code is not None and 200 <= status_code < 300 and proof_present:
             record_payment_event(
                 tool_name,
                 "settled",
                 str(settings()["network"]),
-                meta={"source_context": source_bucket},
+                meta=meta,
             )
         elif proof_present:
             record_payment_event(
                 tool_name,
                 "payment_error",
                 str(settings()["network"]),
-                meta={"source_context": source_bucket},
+                meta=meta,
             )
 
 
