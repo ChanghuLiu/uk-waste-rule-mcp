@@ -193,15 +193,36 @@ def _window(hours: int) -> dict[str, Any]:
     owned: Counter[str] = Counter()
     unattributed: Counter[str] = Counter()
     sources: Counter[str] = Counter()
-    for event_type, source, classification, owner, _payment, count in rows:
-        count=int(count); totals[str(event_type)]+=count; sources[str(source)]+=count
-        if owner or classification=="owner_test": owned[str(event_type)]+=count
-        elif classification in {"confirmed_external","automated_external"}: external[str(event_type)]+=count
-        else: unattributed[str(event_type)]+=count
+    source_attribution: list[dict[str, Any]] = []
+    for event_type, source, classification, owner, payment_status, count in rows:
+        event_type = str(event_type)
+        source = normalize_source(source)
+        classification = str(classification or "unknown")
+        owner_test = bool(owner) or classification == "owner_test"
+        count = int(count)
+        totals[event_type] += count
+        sources[source] += count
+        if owner_test:
+            owned[event_type] += count
+        elif classification == "confirmed_external":
+            external[event_type] += count
+        else:
+            unattributed[event_type] += count
+        source_attribution.append(
+            {
+                "source_bucket": source,
+                "event_type": event_type,
+                "count": count,
+                "external_classification": classification,
+                "owner_test": owner_test,
+                "payment_status": str(payment_status or "not_applicable"),
+            }
+        )
     return {
         "hours":hours,
         "events":dict(totals),
         "sources":dict(sources),
+        "source_attribution":source_attribution,
         "by_tool":[{"tool":t,"event_type":e,"count":int(n)} for t,e,n in tool_rows],
         "business_funnel":{
             "machine_discovery_non_owner_hits":totals.get("discovery_observed",0)-owned.get("discovery_observed",0),
