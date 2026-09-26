@@ -1,4 +1,4 @@
-name: Temporary Waste CDP canary validation
+name: Temporary RegEvidenceHub CDP rollout validation
 
 on:
   push:
@@ -11,65 +11,61 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
-      - name: Check live Waste HTTP 402 challenges
+      - name: Check all live paid HTTP routes return 402
         shell: bash
         run: |
           set -euo pipefail
-
           check_402() {
             name="$1"
             url="$2"
-            body="$3"
             echo "=== DIRECT $name ==="
-            status="$(curl -sS -D "/tmp/${name}.headers" -o "/tmp/${name}.body" \
-              -w '%{http_code}' -X POST "$url" \
-              -H 'Content-Type: application/json' \
-              --data-binary "$body")"
+            status="$(curl -sS -D "/tmp/${name}.headers" -o "/tmp/${name}.body"               -w '%{http_code}' -X POST "$url"               -H 'Content-Type: application/json'               --data-binary '{}')"
             echo "status=$status"
-            grep -Ei '^(payment-required|x-payment-required|content-type):' "/tmp/${name}.headers" || true
             if [ "$status" != "402" ]; then
-              echo "Unexpected status"
+              echo "Unexpected status from $url"
               cat "/tmp/${name}.body"
               exit 1
             fi
+            grep -Ei '^payment-required:' "/tmp/${name}.headers" >/dev/null
           }
 
-          check_402 waste_rule_preflight \
-            'https://waste.regevidencehub.com/api/v1/waste-rule-preflight' \
-            '{"nation":"England","role":"receiver","activities":["receive_waste"],"site_location":"Leeds","waste_types":["mixed controlled waste"],"hazardous_status":false,"authorisation_status":"permit"}'
+          check_402 taxi_preflight 'https://taxi.regevidencehub.com/api/v1/preflight'
+          check_402 taxi_compare 'https://taxi.regevidencehub.com/api/v1/compare'
+          check_402 works_assess 'https://works.regevidencehub.com/api/v1/assess-change-impact'
+          check_402 works_batch 'https://works.regevidencehub.com/api/v1/batch-assess-changes'
+          check_402 cqc_scope 'https://cqc.regevidencehub.com/api/v1/registration-scope-preflight'
+          check_402 cqc_notification 'https://cqc.regevidencehub.com/api/v1/statutory-notification-preflight'
+          check_402 premises_preflight 'https://premises.regevidencehub.com/api/v1/preflight'
+          check_402 premises_compare 'https://premises.regevidencehub.com/api/v1/compare'
+          check_402 waste_rule 'https://waste.regevidencehub.com/api/v1/waste-rule-preflight'
+          check_402 waste_carrier 'https://waste.regevidencehub.com/api/v1/waste-carrier-broker-dealer-preflight'
+          check_402 waste_tracking 'https://waste.regevidencehub.com/api/v1/waste-digital-tracking-readiness'
+          check_402 waste_permit 'https://waste.regevidencehub.com/api/v1/waste-permit-change-preflight'
 
-          check_402 waste_carrier_broker_dealer_preflight \
-            'https://waste.regevidencehub.com/api/v1/waste-carrier-broker-dealer-preflight' \
-            '{"nation":"England","role":"carrier","action":"new_registration","own_waste_only":false}'
-
-          check_402 waste_digital_tracking_readiness \
-            'https://waste.regevidencehub.com/api/v1/waste-digital-tracking-readiness' \
-            '{"nation":"England","receiving_authorisation":"permit","receives_controlled_waste":true,"reporting_method_ready":true}'
-
-          check_402 waste_permit_change_preflight \
-            'https://waste.regevidencehub.com/api/v1/waste-permit-change-preflight' \
-            '{"nation":"England","current":{"maximum_quantity":"10 tonnes"},"proposed":{"maximum_quantity":"20 tonnes"}}'
-
-      - name: Run Coinbase Bazaar validator
+      - name: Run Coinbase Bazaar validator across all 12 resources
         shell: bash
         run: |
           set -euo pipefail
-
           validate() {
             name="$1"
             url="$2"
             echo "=== VALIDATOR $name ==="
-            curl -sS -X POST 'https://api.cdp.coinbase.com/platform/v2/x402/validate' \
-              -H 'Content-Type: application/json' \
-              --data-binary "$(jq -nc --arg resource "$url" '{resource:$resource,method:"POST"}')" \
-              | tee "/tmp/${name}.json"
-            echo
-            jq -e '.valid == true and .simulation.outcome == "accepted"' "/tmp/${name}.json" >/dev/null
+            curl -sS -X POST 'https://api.cdp.coinbase.com/platform/v2/x402/validate'               -H 'Content-Type: application/json'               --data-binary "$(jq -nc --arg resource "$url" '{resource:$resource,method:"POST"}')"               > "/tmp/${name}.json"
+            jq -c '{valid, outcome:.simulation.outcome, statusCode, index}' "/tmp/${name}.json"
+            jq -e '.valid == true and .simulation.outcome == "accepted" and .statusCode == 402' "/tmp/${name}.json" >/dev/null
           }
 
-          validate waste_rule_preflight 'https://waste.regevidencehub.com/api/v1/waste-rule-preflight'
-          validate waste_carrier_broker_dealer_preflight 'https://waste.regevidencehub.com/api/v1/waste-carrier-broker-dealer-preflight'
-          validate waste_digital_tracking_readiness 'https://waste.regevidencehub.com/api/v1/waste-digital-tracking-readiness'
-          validate waste_permit_change_preflight 'https://waste.regevidencehub.com/api/v1/waste-permit-change-preflight'
+          validate taxi_preflight 'https://taxi.regevidencehub.com/api/v1/preflight'
+          validate taxi_compare 'https://taxi.regevidencehub.com/api/v1/compare'
+          validate works_assess 'https://works.regevidencehub.com/api/v1/assess-change-impact'
+          validate works_batch 'https://works.regevidencehub.com/api/v1/batch-assess-changes'
+          validate cqc_scope 'https://cqc.regevidencehub.com/api/v1/registration-scope-preflight'
+          validate cqc_notification 'https://cqc.regevidencehub.com/api/v1/statutory-notification-preflight'
+          validate premises_preflight 'https://premises.regevidencehub.com/api/v1/preflight'
+          validate premises_compare 'https://premises.regevidencehub.com/api/v1/compare'
+          validate waste_rule 'https://waste.regevidencehub.com/api/v1/waste-rule-preflight'
+          validate waste_carrier 'https://waste.regevidencehub.com/api/v1/waste-carrier-broker-dealer-preflight'
+          validate waste_tracking 'https://waste.regevidencehub.com/api/v1/waste-digital-tracking-readiness'
+          validate waste_permit 'https://waste.regevidencehub.com/api/v1/waste-permit-change-preflight'
