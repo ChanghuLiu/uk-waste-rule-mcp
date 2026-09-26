@@ -1,0 +1,60 @@
+name: Temporary source-bucket summary
+
+on:
+  push:
+    branches:
+      - ops/paid-challenge-breakdown-20260926
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Summarize CQC and Premises paid challenge sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, urllib.request
+          from collections import Counter
+
+          def fetch(url):
+              req=urllib.request.Request(url,headers={"User-Agent":"regevidencehub-p0-audit/1.0","Accept":"application/json"})
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  return json.load(r)
+
+          # CQC
+          c=fetch("https://cqc.regevidencehub.com/metrics")
+          w=c.get("windows",{}).get("24h",{})
+          rows=w.get("source_attribution") or []
+          cc=Counter()
+          for row in rows:
+              if not isinstance(row,dict) or row.get("event_type")!="paid_challenge":
+                  continue
+              cc[(row.get("source_bucket") or "unknown",row.get("external_classification") or "unknown",bool(row.get("owner_test")))] += int(row.get("count") or 0)
+          print("CQC_SOURCE",json.dumps([
+              {"source_bucket":k[0],"classification":k[1],"owner_test":k[2],"count":v}
+              for k,v in sorted(cc.items())
+          ],separators=(",",":")))
+
+          # Premises
+          p=fetch("https://premises.regevidencehub.com/metrics")
+          x=(p.get("x402_conversion") or {}).get("24h",{})
+          rows=x.get("source_attribution") or []
+          pc=Counter()
+          for row in rows:
+              if not isinstance(row,dict) or row.get("event_type")!="paid_challenge":
+                  continue
+              pc[(row.get("source_bucket") or "unknown",row.get("external_classification") or "unknown",bool(row.get("owner_test")))] += int(row.get("count") or 0)
+          print("PREMISES_SOURCE",json.dumps([
+              {"source_bucket":k[0],"classification":k[1],"owner_test":k[2],"count":v}
+              for k,v in sorted(pc.items())
+          ],separators=(",",":")))
+
+          # Totals sanity
+          print("CQC_TOTAL",w.get("business_funnel",{}).get("actual_paid_tool_challenges"))
+          print("PREMISES_TOTAL",x.get("outcomes",{}).get("CHALLENGE"))
+          PY
