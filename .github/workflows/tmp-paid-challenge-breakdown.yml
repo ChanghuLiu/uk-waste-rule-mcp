@@ -1,0 +1,63 @@
+name: Temporary paid-challenge breakdown
+
+on:
+  push:
+    branches:
+      - ops/paid-challenge-breakdown-20260926
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fetch compact challenge attribution
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, urllib.request
+
+          products = {
+              "taxi": "https://taxi.regevidencehub.com/metrics",
+              "works": "https://works.regevidencehub.com/metrics",
+              "cqc": "https://cqc.regevidencehub.com/metrics",
+              "premises": "https://premises.regevidencehub.com/metrics",
+              "waste": "https://waste.regevidencehub.com/metrics",
+          }
+
+          def fetch(url):
+              req=urllib.request.Request(url,headers={"User-Agent":"regevidencehub-p0-audit/1.0","Accept":"application/json"})
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  return json.load(r)
+
+          def rows(obj,path=()):
+              if isinstance(obj,dict):
+                  interesting={}
+                  for k,v in obj.items():
+                      lk=k.lower()
+                      if any(t in lk for t in ("challenge","paid_execution","paid_executed","source_attribution","outcomes")):
+                          if isinstance(v,(int,float,str,type(None),dict)):
+                              interesting[k]=v
+                  if interesting:
+                      yield path,interesting
+                  for k,v in obj.items():
+                      yield from rows(v,path+(k,))
+              elif isinstance(obj,list):
+                  for i,v in enumerate(obj):
+                      yield from rows(v,path+(str(i),))
+
+          for name,url in products.items():
+              data=fetch(url)
+              print(f"=== {name.upper()} ===")
+              for path,vals in rows(data):
+                  p=".".join(path)
+                  if "24h" not in p:
+                      continue
+                  txt=json.dumps(vals,separators=(",",":"),sort_keys=True)
+                  if len(txt)>1600:
+                      txt=txt[:1600]+"..."
+                  print(p,txt)
+          PY
