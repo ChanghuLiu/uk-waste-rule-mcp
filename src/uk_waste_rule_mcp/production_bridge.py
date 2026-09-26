@@ -215,8 +215,19 @@ def _openapi_document() -> dict[str, Any]:
     paths.update(paid_openapi_paths())
     return {
         "openapi":"3.1.0",
-        "info":{"title":"RegEvidenceHub Waste","version":__version__,"description":"Evidence-linked England waste regulatory decision service."},
+        "info":{
+            "title":"RegEvidenceHub Waste",
+            "version":__version__,
+            "description":"Evidence-linked England waste regulatory decision service.",
+            "contact":{"email":"launchcircle.server@gmail.com"},
+            "x-guidance":(
+                "Use the narrowest paid route for the regulatory question: waste-rule routing, carrier/broker/dealer registration, Digital Waste Tracking readiness, or permit-change impact. "
+                "Provide the business role, waste activity, site/transport facts, permit or registration context, and change details requested by the schema. "
+                "The service returns deterministic evidence-linked preflight output and fails closed when official evidence is stale, changed, unreviewed, or incomplete."
+            ),
+        },
         "servers":[{"url":PUBLIC_ORIGIN}],
+        "externalDocs":{"description":"Agent-readable usage and capability guide","url":f"{PUBLIC_ORIGIN}/llms.txt"},
         "paths":paths,
     }
 
