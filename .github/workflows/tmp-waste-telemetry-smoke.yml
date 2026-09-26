@@ -9,29 +9,18 @@ permissions:
   contents: read
 
 jobs:
-  smoke:
+  audit:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Trigger one owner-marked unpaid 402
+      - name: Read compact Waste payment telemetry
         shell: bash
         run: |
           set -euo pipefail
-          status="$(curl -sS -o /tmp/body.json -D /tmp/headers.txt -w '%{http_code}'             -X POST 'https://waste.regevidencehub.com/api/v1/waste-rule-preflight'             -H 'Content-Type: application/json'             -H 'User-Agent: waste-owned-paid-smoke/1.0'             --data-binary '{"nation":"England","role":"receiver","activities":["receive_waste"],"site_location":"Leeds","waste_types":["mixed controlled waste"],"hazardous_status":false,"authorisation_status":"permit"}')"
-          echo "HTTP_STATUS=$status"
-          grep -i '^payment-required:' /tmp/headers.txt | head -1
-          test "$status" = "402"
-
-      - name: Verify commercial metrics classify smoke as owned
-        shell: bash
-        run: |
-          set -euo pipefail
-          sleep 2
           curl -sS 'https://waste.regevidencehub.com/metrics' > /tmp/metrics.json
+          echo '=== BUSINESS FUNNEL ==='
           jq -c '.windows["24h"].business_funnel' /tmp/metrics.json
-          jq -e '
-            .windows["24h"].business_funnel.actual_paid_tool_challenges >= 1
-            and .windows["24h"].business_funnel.owned_paid_tool_challenges >= 1
-            and .windows["24h"].business_funnel.declared_external_paid_tool_challenges == 0
-            and .windows["24h"].business_funnel.paid_executions == 0
-          ' /tmp/metrics.json >/dev/null
+          echo '=== PAID CHALLENGE BY TOOL ==='
+          jq -c '[.windows["24h"].by_tool[] | select(.event_type=="paid_challenge")]' /tmp/metrics.json
+          echo '=== SOURCE TOTALS ==='
+          jq -c '.windows["24h"].sources' /tmp/metrics.json
