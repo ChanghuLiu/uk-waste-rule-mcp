@@ -204,7 +204,55 @@ def settings() -> dict[str, str | bool]:
         "facilitator_url": os.getenv(
             "WASTE_X402_FACILITATOR_URL", "https://facilitator.payai.network"
         ).strip(),
+        "http_facilitator": os.getenv(
+            "WASTE_HTTP_X402_FACILITATOR", "payai"
+        ).strip().lower() or "payai",
+        "http_facilitator_url": os.getenv(
+            "WASTE_HTTP_X402_FACILITATOR_URL", ""
+        ).strip(),
     }
+
+
+def _http_facilitator_config(cfg: dict[str, str | bool]):
+    """Return the facilitator config for paid HTTP routes only.
+
+    MCP payment continues to use WASTE_X402_FACILITATOR_URL. Setting
+    WASTE_HTTP_X402_FACILITATOR=cdp opts only the HTTP compatibility
+    surface into Coinbase CDP so Bazaar indexing can be triggered by a
+    genuine CDP-settled buyer payment.
+    """
+    from x402.http import FacilitatorConfig
+
+    mode = str(cfg.get("http_facilitator") or "payai").strip().lower()
+    if mode == "cdp":
+        if not os.getenv("CDP_API_KEY_ID", "").strip() or not os.getenv(
+            "CDP_API_KEY_SECRET", ""
+        ).strip():
+            raise RuntimeError(
+                "CDP_API_KEY_ID and CDP_API_KEY_SECRET are required when "
+                "WASTE_HTTP_X402_FACILITATOR=cdp"
+            )
+        try:
+            from cdp.x402 import create_facilitator_config
+        except ImportError as exc:
+            raise RuntimeError(
+                "CDP HTTP x402 support requires cdp-sdk"
+            ) from exc
+        return create_facilitator_config()
+
+    if mode in {"payai", "legacy", "url"}:
+        url = str(
+            cfg.get("http_facilitator_url")
+            or cfg.get("facilitator_url")
+            or ""
+        ).strip()
+        if not url:
+            raise RuntimeError("HTTP x402 facilitator URL is required")
+        return FacilitatorConfig(url=url)
+
+    raise RuntimeError(
+        "WASTE_HTTP_X402_FACILITATOR must be one of: payai, url, cdp"
+    )
 
 
 def _amount(value: str) -> str:
@@ -336,9 +384,7 @@ def wrap_http_x402(app: Any) -> Any:
     if not network.startswith("eip155:"):
         raise RuntimeError("Waste HTTP x402 compatibility supports eip155:* exact payment only")
 
-    facilitator = HTTPFacilitatorClient(
-        FacilitatorConfig(url=str(cfg["facilitator_url"]))
-    )
+    facilitator = HTTPFacilitatorClient(_http_facilitator_config(cfg))
     resource_server = x402ResourceServer(facilitator)
     resource_server.register(network, ExactEvmServerScheme())
     resource_server.register_extension(bazaar_resource_server_extension)
