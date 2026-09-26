@@ -22,6 +22,12 @@ SOURCE_BUCKETS = {
     "openai","claude","grok","official_registry","glama","smithery","payai","directory",
     "organic","regevidencehub","direct","unknown","mcpindex","mcpso","wellknown","agent402",
 }
+COMMERCIAL_ATTRIBUTION_EVENTS = {
+    "free_business_call",
+    "paid_challenge",
+    "paid_executed",
+    "payment_error",
+}
 ALIASES = {
     "chatgpt":"openai","chatgpt_app":"openai","openai_chatgpt":"openai",
     "claude_connector":"claude","claude_connectors":"claude","xai_grok":"grok",
@@ -208,16 +214,17 @@ def _window(hours: int) -> dict[str, Any]:
             external[event_type] += count
         else:
             unattributed[event_type] += count
-        source_attribution.append(
-            {
-                "source_bucket": source,
-                "event_type": event_type,
-                "count": count,
-                "external_classification": classification,
-                "owner_test": owner_test,
-                "payment_status": str(payment_status or "not_applicable"),
-            }
-        )
+        if event_type in COMMERCIAL_ATTRIBUTION_EVENTS:
+            source_attribution.append(
+                {
+                    "source_bucket": source,
+                    "event_type": event_type,
+                    "count": count,
+                    "external_classification": classification,
+                    "owner_test": owner_test,
+                    "payment_status": str(payment_status or "not_applicable"),
+                }
+            )
     return {
         "hours":hours,
         "events":dict(totals),
