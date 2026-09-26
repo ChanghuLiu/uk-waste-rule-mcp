@@ -1,0 +1,54 @@
+name: Temporary latest P0 gate check
+
+on:
+  push:
+    branches:
+      - ops/paid-challenge-breakdown-20260926
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fetch latest P0 gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, urllib.request
+
+          def fetch(url):
+              req=urllib.request.Request(url,headers={"User-Agent":"regevidencehub-p0-audit/1.0","Accept":"application/json"})
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  return json.load(r)
+
+          d24=fetch("https://mcp-commercial-funnel-production.up.railway.app/api/commercial-funnel?window=24h")
+          d7=fetch("https://mcp-commercial-funnel-production.up.railway.app/api/commercial-funnel?window=7d")
+          print("P24",json.dumps({"generated_at":d24.get("generated_at"),"stages":d24["portfolio"]["stages"]},separators=(",",":"),sort_keys=True))
+          for p in d7.get("products",[]):
+              if p.get("id") in {"taxi","england_works_watch","cqc","premises","waste"}:
+                  human=p.get("experiment_human_funnel") or p.get("human_offer_funnel") or {}
+                  st=human.get("stages") or {}
+                  print("HUMAN",p["id"],json.dumps({
+                      "since":human.get("since"),
+                      "landing":st.get("landing"),
+                      "qualified":st.get("qualified_commercial_intent"),
+                      "checkout":st.get("checkout_requested"),
+                      "payment":st.get("payment_succeeded")
+                  },separators=(",",":"),sort_keys=True))
+
+          for name,domain in [
+              ("works","works.regevidencehub.com"),
+              ("cqc","cqc.regevidencehub.com"),
+              ("premises","premises.regevidencehub.com"),
+              ("waste","waste.regevidencehub.com"),
+          ]:
+              x=fetch("https://x402-list.com/api/v1/services?q="+domain)
+              print("X402LIST",name,json.dumps({"total":x.get("meta",{}).get("total"),"data":[{"slug":i.get("slug"),"status":i.get("status"),"payment_ready":i.get("payment_ready")} for i in x.get("data",[])]},separators=(",",":"),sort_keys=True))
+
+          c=fetch("https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xDAAef0FD525278aAD0bA11066A96c338642A3d1A&limit=100&offset=0")
+          print("COINBASE",json.dumps({"total":c.get("pagination",{}).get("total"),"resources":len(c.get("resources",[]))},separators=(",",":"),sort_keys=True))
+          PY
