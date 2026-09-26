@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from uk_waste_rule_mcp.analytics import public_usage_summary, record_payment_event
+from uk_waste_rule_mcp.analytics import public_usage_summary, record_discovery, record_payment_event
 
 
 def test_source_attribution_preserves_directory_challenge_without_promoting_customer(monkeypatch, tmp_path):
@@ -71,3 +71,22 @@ def test_public_source_attribution_contains_no_sensitive_request_fields(monkeypa
         "owner_test",
         "payment_status",
     }
+
+
+def test_discovery_stays_out_of_commercial_source_attribution(monkeypatch, tmp_path):
+    monkeypatch.setenv("WASTE_ANALYTICS_DB", str(tmp_path / "usage.db"))
+
+    record_discovery("/metrics", source="unknown")
+    record_payment_event(
+        "waste_rule_preflight",
+        "challenge",
+        "eip155:8453",
+        meta={"source_context": "directory"},
+    )
+
+    window = public_usage_summary()["windows"]["24h"]
+
+    assert window["events"]["discovery_observed"] == 1
+    assert all(row["event_type"] != "discovery_observed" for row in window["source_attribution"])
+    assert window["source_attribution"][0]["source_bucket"] == "directory"
+    assert window["source_attribution"][0]["event_type"] == "paid_challenge"
