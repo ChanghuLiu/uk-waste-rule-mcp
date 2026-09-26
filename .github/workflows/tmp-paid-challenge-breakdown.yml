@@ -45,3 +45,5 @@ jobs:
                   rows=[r for r in product.get("attribution",[]) if r.get("paid_challenge")]
                   print("DASH",product.get("id"),json.dumps(rows,separators=(",",":"),sort_keys=True))
           PY
+
+# rerun after mcp-product-console 4c87 deployment
