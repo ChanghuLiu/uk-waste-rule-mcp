@@ -1,4 +1,4 @@
-name: Temporary dashboard Waste attribution verification
+name: Temporary final Waste attribution verification
 
 on:
   push:
@@ -13,15 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify Waste directory attribution end to end
+      - name: Verify final live attribution state
         shell: bash
         run: |
           set -euo pipefail
           curl -sS 'https://waste.regevidencehub.com/metrics' > /tmp/waste.json
           curl -sS 'https://mcp-commercial-funnel-production.up.railway.app/api/commercial-funnel?window=24h' > /tmp/funnel.json
 
-          echo '=== WASTE METRICS ==='
-          jq -c '[.windows["24h"].source_attribution[] | select(.event_type=="paid_challenge")]' /tmp/waste.json
+          echo '=== WASTE SOURCE ATTRIBUTION ==='
+          jq -c '.windows["24h"].source_attribution' /tmp/waste.json
 
           echo '=== WASTE DASHBOARD ==='
           jq -c '.products[] | select(.id=="waste") | {stage:.stages.paid_challenge,attribution,diagnostics:.paid_challenge_diagnostics,reconciliation:.attribution_reconciliation}' /tmp/funnel.json
