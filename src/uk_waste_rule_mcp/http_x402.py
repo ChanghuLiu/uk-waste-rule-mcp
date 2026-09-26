@@ -4,7 +4,7 @@ import os
 import time
 from typing import Any, Callable
 
-from .analytics import record_call
+from .analytics import record_call, record_payment_event
 from .engine import (
     carrier_broker_dealer_registration_preflight,
     digital_waste_tracking_receipt_readiness,
@@ -182,6 +182,109 @@ EXECUTORS: dict[str, tuple[type, Callable[[dict[str, Any]], dict[str, Any]]]] = 
     ),
     "waste_permit_change_preflight": (PermitChangeScenario, permit_change_impact),
 }
+
+_PROTECTED_PATHS = {
+    str(spec["path"]): name
+    for name, spec in SPECS.items()
+}
+_PAYMENT_HEADER_NAMES = {
+    b"payment-signature",
+    b"x-payment",
+    b"x-payment-signature",
+    b"payment",
+}
+
+
+def _http_owner_test_marker(user_agent: str) -> str | None:
+    ua = (user_agent or "").strip().lower()
+    if ua.startswith("waste-owned-paid-smoke/") or ua.startswith("github-production-smoke/"):
+        return "portfolio_owner_probe_v21"
+    return None
+
+
+def _http_source_bucket(user_agent: str) -> str:
+    """Map only strongly recognizable x402 monitor clients to a bounded source.
+
+    Unknown browser/node clients intentionally remain unknown. This is
+    observability-only and has no authentication or payment role.
+    """
+    ua = (user_agent or "").strip().lower()
+    if (
+        ua.startswith("x402-list-monitor/")
+        or ua.startswith("x402-observer/")
+        or ua.startswith("x402watch/")
+    ):
+        return "directory"
+    return "unknown"
+
+
+class HttpX402TelemetryASGI:
+    """Observe paid HTTP route outcomes without retaining sensitive request data."""
+
+    def __init__(self, app: Any):
+        self.app = app
+
+    async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
+        if (
+            scope.get("type") != "http"
+            or scope.get("method") != "POST"
+            or scope.get("path") not in _PROTECTED_PATHS
+        ):
+            await self.app(scope, receive, send)
+            return
+
+        path = str(scope["path"])
+        tool_name = _PROTECTED_PATHS[path]
+        headers = {bytes(k).lower(): bytes(v) for k, v in scope.get("headers", [])}
+        proof_present = any(name in headers for name in _PAYMENT_HEADER_NAMES)
+        user_agent = headers.get(b"user-agent", b"").decode("utf-8", errors="ignore")
+        source_bucket = _http_source_bucket(user_agent)
+        owner_test_marker = _http_owner_test_marker(user_agent)
+        meta = {"source_context": source_bucket}
+        if owner_test_marker:
+            meta["owner_test_marker"] = owner_test_marker
+        status_code: int | None = None
+
+        async def observed_send(message: dict[str, Any]) -> None:
+            nonlocal status_code
+            if message.get("type") == "http.response.start":
+                status_code = int(message.get("status", 0))
+            await send(message)
+
+        try:
+            await self.app(scope, receive, observed_send)
+        except Exception:
+            if proof_present:
+                record_payment_event(
+                    tool_name,
+                    "payment_error",
+                    str(settings()["network"]),
+                    meta=meta,
+                )
+            raise
+
+        if status_code == 402:
+            record_payment_event(
+                tool_name,
+                "challenge",
+                str(settings()["network"]),
+                meta=meta,
+            )
+        elif status_code is not None and 200 <= status_code < 300 and proof_present:
+            record_payment_event(
+                tool_name,
+                "settled",
+                str(settings()["network"]),
+                meta=meta,
+            )
+        elif proof_present:
+            record_payment_event(
+                tool_name,
+                "payment_error",
+                str(settings()["network"]),
+                meta=meta,
+            )
+
 
 
 def _truthy(value: str | None) -> bool:
@@ -429,4 +532,5 @@ def wrap_http_x402(app: Any) -> Any:
             extensions=discovery_extension(spec),
         )
 
-    return PaymentMiddlewareASGI(app, routes=routes, server=resource_server)
+    protected = PaymentMiddlewareASGI(app, routes=routes, server=resource_server)
+    return HttpX402TelemetryASGI(protected)
