@@ -1,0 +1,31 @@
+name: Temporary live dashboard diagnostics check
+
+on:
+  push:
+    branches:
+      - ops/paid-challenge-breakdown-20260926
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fetch compact live diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, urllib.request
+          url="https://mcp-commercial-funnel-production.up.railway.app/api/commercial-funnel?window=24h"
+          req=urllib.request.Request(url,headers={"User-Agent":"regevidencehub-p0-audit/1.0","Accept":"application/json"})
+          with urllib.request.urlopen(req,timeout=30) as r:
+              data=json.load(r)
+          print("GENERATED",data.get("generated_at"))
+          print("PORTFOLIO",json.dumps((data.get("portfolio") or {}).get("paid_challenge_diagnostics"),sort_keys=True,separators=(",",":")))
+          for p in data.get("products") or []:
+              if p.get("id") in {"taxi","england_works_watch","cqc","premises","waste"}:
+                  print("PRODUCT",p.get("id"),json.dumps(p.get("paid_challenge_diagnostics"),sort_keys=True,separators=(",",":")))
+          PY
