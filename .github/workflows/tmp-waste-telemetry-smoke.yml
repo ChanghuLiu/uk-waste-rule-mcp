@@ -1,4 +1,4 @@
-name: Temporary dashboard live verification
+name: Temporary Waste source-attribution verification
 
 on:
   push:
@@ -13,19 +13,49 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify live challenge diagnostics
+      - name: Trigger one directory-monitor unpaid 402
         shell: bash
         run: |
           set -euo pipefail
+          status="$(curl -sS -o /tmp/body.json -D /tmp/headers.txt -w '%{http_code}'             -X POST 'https://waste.regevidencehub.com/api/v1/waste-carrier-broker-dealer-preflight'             -H 'Content-Type: application/json'             -H 'User-Agent: x402-list-monitor/1.0 (+https://x402-list.com)'             --data-binary '{"nation":"England","role":"carrier","action":"new_registration","own_waste_only":false}')"
+          echo "HTTP_STATUS=$status"
+          test "$status" = "402"
+
+      - name: Verify Waste metrics expose directory attribution
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 2
+          curl -sS 'https://waste.regevidencehub.com/metrics' > /tmp/waste.json
+          echo '=== WASTE FUNNEL ==='
+          jq -c '.windows["24h"].business_funnel' /tmp/waste.json
+          echo '=== WASTE SOURCE ATTRIBUTION ==='
+          jq -c '[.windows["24h"].source_attribution[] | select(.event_type=="paid_challenge")]' /tmp/waste.json
+          jq -e '
+            .windows["24h"].source_attribution
+            | any(
+                .source_bucket=="directory"
+                and .event_type=="paid_challenge"
+                and .owner_test==false
+                and .external_classification=="unknown"
+                and .count>=1
+              )
+          ' /tmp/waste.json >/dev/null
+
+      - name: Verify shared dashboard treats directory challenge as automated noise
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 2
           curl -sS 'https://mcp-commercial-funnel-production.up.railway.app/api/commercial-funnel?window=24h' > /tmp/funnel.json
+          echo '=== WASTE DASHBOARD ==='
+          jq -c '.products[] | select(.id=="waste") | {stage:.stages.paid_challenge,attribution,diagnostics:.paid_challenge_diagnostics}' /tmp/funnel.json
           echo '=== PORTFOLIO DIAGNOSTICS ==='
           jq -c '.portfolio.paid_challenge_diagnostics' /tmp/funnel.json
-          echo '=== WASTE ==='
-          jq -c '.products[] | select(.id=="waste") | {stages:.stages.paid_challenge,attribution,paid_challenge_diagnostics}' /tmp/funnel.json
           jq -e '
             (.products[] | select(.id=="waste") |
-              (.attribution | any(.source_bucket=="directory")) and
-              (.paid_challenge_diagnostics.known_automated_infrastructure_floor >= 1) and
-              (.stages.paid_challenge.confirmed_external == 0)
+              (.attribution | any(.source_bucket=="directory" and .paid_challenge>=1)) and
+              (.paid_challenge_diagnostics.known_automated_infrastructure_floor>=1) and
+              (.stages.paid_challenge.confirmed_external==0)
             )
           ' /tmp/funnel.json >/dev/null
