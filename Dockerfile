@@ -6,7 +6,7 @@ COPY . /app
 # Keep x402 aligned with the RegEvidenceHub vertical services and run the
 # exact compile/test gate inside the image that Railway will deploy.
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir '.[mcp,dev]' 'x402[fastapi,evm]==2.24.0' \
+    && pip install --no-cache-dir '.[mcp,dev]' 'x402[fastapi,evm]==2.24.0' 'cdp-sdk==1.48.1' \
     && python -c "import httpx, mcp, x402; print('WASTE_RUNTIME_IMPORT=PASS')" \
     && python -m compileall -q src \
     && pytest -q
