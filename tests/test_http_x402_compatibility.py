@@ -11,6 +11,8 @@ from uk_waste_rule_mcp.http_x402 import (
     PERMIT_PATH,
     RULE_PATH,
     SPECS,
+    HttpX402TelemetryASGI,
+    _http_source_bucket,
     paid_openapi_paths,
     wrap_http_x402,
 )
@@ -59,3 +61,44 @@ def test_permit_discovery_schema_has_no_local_defs_or_refs():
     serialized = str(schema)
     assert "$defs" not in serialized
     assert "$ref" not in serialized
+
+
+def test_http_monitor_user_agents_are_bounded_directory_source():
+    assert _http_source_bucket("x402-list-monitor/1.0 (+https://x402-list.com)") == "directory"
+    assert _http_source_bucket("x402-observer/1.0") == "directory"
+    assert _http_source_bucket("x402watch/1 (+https://x402watch.vercel.app)") == "directory"
+    assert _http_source_bucket("Mozilla/5.0") == "unknown"
+    assert _http_source_bucket("node") == "unknown"
+
+
+def test_http_telemetry_records_402_challenge_without_request_payload(monkeypatch):
+    events = []
+
+    def fake_record(tool, event, network=None, *, meta=None):
+        events.append((tool, event, network, meta))
+
+    monkeypatch.setattr("uk_waste_rule_mcp.http_x402.record_payment_event", fake_record)
+    monkeypatch.setenv("WASTE_X402_NETWORK", "eip155:8453")
+
+    async def endpoint(_request):
+        return JSONResponse({"error": "Payment Required"}, status_code=402)
+
+    app = Starlette(routes=[Route(RULE_PATH, endpoint, methods=["POST"])])
+    wrapped = HttpX402TelemetryASGI(app)
+
+    with TestClient(wrapped) as client:
+        response = client.post(
+            RULE_PATH,
+            json={"sensitive": "must-not-be-recorded"},
+            headers={"User-Agent": "x402-list-monitor/1.0 (+https://x402-list.com)"},
+        )
+
+    assert response.status_code == 402
+    assert events == [
+        (
+            "waste_rule_preflight",
+            "challenge",
+            "eip155:8453",
+            {"source_context": "directory"},
+        )
+    ]
