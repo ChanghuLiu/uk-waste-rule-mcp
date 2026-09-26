@@ -1,4 +1,4 @@
-name: Temporary post-patch attribution verification
+name: Temporary final P0 measurement verification
 
 on:
   push:
@@ -13,37 +13,30 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Read compact product and dashboard attribution
+      - name: Read compact final P0 metrics
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           import json, urllib.request
-
-          def get(url):
-              req=urllib.request.Request(url,headers={"User-Agent":"regevidencehub-p0-audit/1.0","Accept":"application/json"})
-              with urllib.request.urlopen(req,timeout=20) as r:
-                  return json.load(r)
-
-          cqc=get("https://cqc.regevidencehub.com/metrics")
-          w=cqc.get("windows",{}).get("24h",{})
-          print("CQC",json.dumps({
-              "paid_challenges":w.get("paid_challenges"),
-              "source_attribution":[x for x in w.get("source_attribution",[]) if x.get("event_type")=="paid_challenge"],
+          url="https://mcp-commercial-funnel-production.up.railway.app/api/commercial-funnel?window=24h"
+          req=urllib.request.Request(url,headers={"User-Agent":"regevidencehub-p0-audit/1.0","Accept":"application/json"})
+          with urllib.request.urlopen(req,timeout=20) as r:
+              data=json.load(r)
+          stages=data["portfolio"]["stages"]
+          print("PORTFOLIO",json.dumps({
+              "generated_at":data.get("generated_at"),
+              "discovery":stages["discovery"],
+              "free_business_call":stages["free_business_call"],
+              "paid_challenge":stages["paid_challenge"],
+              "paid_executed":stages["paid_executed"],
+              "repeat_paid":stages["repeat_paid"],
           },separators=(",",":"),sort_keys=True))
-
-          prem=get("https://premises.regevidencehub.com/metrics")
-          p=prem.get("x402_conversion",{}).get("24h",{})
-          print("PREMISES",json.dumps({
-              "outcomes":p.get("outcomes"),
-              "source_attribution":p.get("source_attribution") or p.get("attribution") or [],
-          },separators=(",",":"),sort_keys=True))
-
-          dash=get("https://mcp-commercial-funnel-production.up.railway.app/api/commercial-funnel?window=24h")
-          for product in dash.get("products",[]):
-              if product.get("id") in {"taxi","cqc","premises"}:
-                  rows=[r for r in product.get("attribution",[]) if r.get("paid_challenge")]
-                  print("DASH",product.get("id"),json.dumps(rows,separators=(",",":"),sort_keys=True))
+          for product in data.get("products",[]):
+              if product.get("id") in {"taxi","england_works_watch","cqc","premises","waste"}:
+                  print("PRODUCT",product["id"],json.dumps({
+                      "paid_challenge":product["stages"]["paid_challenge"],
+                      "paid_executed":product["stages"]["paid_executed"],
+                      "attribution":[r for r in product.get("attribution",[]) if r.get("paid_challenge") or r.get("owner_test_paid_challenge")],
+                  },separators=(",",":"),sort_keys=True))
           PY
-
-# rerun after mcp-product-console 4c87 deployment
