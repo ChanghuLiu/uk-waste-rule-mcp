@@ -1,4 +1,4 @@
-name: Temporary Waste HTTP telemetry smoke
+name: Temporary dashboard live verification
 
 on:
   push:
@@ -9,18 +9,23 @@ permissions:
   contents: read
 
 jobs:
-  audit:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Read compact Waste payment telemetry
+      - name: Verify live challenge diagnostics
         shell: bash
         run: |
           set -euo pipefail
-          curl -sS 'https://waste.regevidencehub.com/metrics' > /tmp/metrics.json
-          echo '=== BUSINESS FUNNEL ==='
-          jq -c '.windows["24h"].business_funnel' /tmp/metrics.json
-          echo '=== PAID CHALLENGE BY TOOL ==='
-          jq -c '[.windows["24h"].by_tool[] | select(.event_type=="paid_challenge")]' /tmp/metrics.json
-          echo '=== SOURCE TOTALS ==='
-          jq -c '.windows["24h"].sources' /tmp/metrics.json
+          curl -sS 'https://mcp-commercial-funnel-production.up.railway.app/api/commercial-funnel?window=24h' > /tmp/funnel.json
+          echo '=== PORTFOLIO DIAGNOSTICS ==='
+          jq -c '.portfolio.paid_challenge_diagnostics' /tmp/funnel.json
+          echo '=== WASTE ==='
+          jq -c '.products[] | select(.id=="waste") | {stages:.stages.paid_challenge,attribution,paid_challenge_diagnostics}' /tmp/funnel.json
+          jq -e '
+            (.products[] | select(.id=="waste") |
+              (.attribution | any(.source_bucket=="directory")) and
+              (.paid_challenge_diagnostics.known_automated_infrastructure_floor >= 1) and
+              (.stages.paid_challenge.confirmed_external == 0)
+            )
+          ' /tmp/funnel.json >/dev/null
