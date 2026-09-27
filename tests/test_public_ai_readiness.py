@@ -43,7 +43,8 @@ def test_public_ai_mcp_is_payment_free_and_read_only(monkeypatch):
 
     assert listing.status_code == 200
     tools = listing.json()["result"]["tools"]
-    assert [tool["name"] for tool in tools] == list(public_ai_server.PUBLIC_AI_TOOL_NAMES)
+    assert [tool["name"] for tool in tools if tool["name"] in public_ai_server.PUBLIC_AI_TOOL_NAMES] == list(public_ai_server.PUBLIC_AI_TOOL_NAMES)
+    assert {"waste_rule_info", "list_waste_rules"}.issubset({tool["name"] for tool in tools})
     for tool in tools:
         annotations = tool["annotations"]
         assert annotations["readOnlyHint"] is True
@@ -115,11 +116,12 @@ def test_public_ai_tool_descriptions_and_schemas_are_agent_routable():
         listing=client.post("/mcp",json={"jsonrpc":"2.0","id":99,"method":"tools/list","params":{}})
     assert listing.status_code==200
     tools={tool["name"]:tool for tool in listing.json()["result"]["tools"]}
-    assert set(tools)==set(public_ai_server.PUBLIC_AI_TOOL_NAMES)
+    assert set(public_ai_server.PUBLIC_AI_TOOL_NAMES).issubset(set(tools))
+    assert {"waste_rule_info", "list_waste_rules"}.issubset(set(tools))
     for name,tool in tools.items():
         description=tool.get("description","")
         assert len(description)>=120, name
-        assert "Do NOT use" in description or name in {"waste_service_info","waste_rule_catalog","waste_source_status"}, name
+        assert "Do NOT use" in description or name in {"waste_service_info","waste_rule_catalog","waste_source_status","waste_rule_info","list_waste_rules"}, name
     for name in (
         "waste_rule_preflight",
         "waste_carrier_broker_dealer_preflight",
@@ -147,3 +149,16 @@ def test_glama_claim_challenge_is_bounded(monkeypatch):
         "$schema": "https://glama.ai/mcp/schemas/connector.json",
         "claim": "glama_claim_test_token",
     }
+
+
+def test_public_ai_legacy_discovery_aliases_are_callable():
+    pytest.importorskip("mcp.server")
+    pytest.importorskip("starlette.testclient")
+    from starlette.testclient import TestClient
+    from uk_waste_rule_mcp import public_ai_server
+    app=public_ai_server.build_public_ai_server().streamable_http_app(json_response=True,stateless_http=True,host="testserver")
+    with TestClient(app) as client:
+        for request_id, name in enumerate(("waste_rule_info", "list_waste_rules"), start=20):
+            response=client.post("/mcp",json={"jsonrpc":"2.0","id":request_id,"method":"tools/call","params":{"name":name,"arguments":{}}})
+            assert response.status_code==200
+            assert "Unknown tool" not in response.text

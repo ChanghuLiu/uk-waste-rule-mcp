@@ -25,8 +25,8 @@ The OpenAI endpoint is permanently payment-free and isolated from the commercial
 
 It exposes only:
 
-1. `waste_rule_info`
-2. `list_waste_rules`
+1. `waste_service_info`
+2. `waste_rule_catalog`
 3. `waste_source_status`
 4. `waste_rule_preflight`
 5. `permit_change_impact`

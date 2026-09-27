@@ -14,8 +14,8 @@ https://docs.anthropic.com/en/docs/agents-and-tools/mcp-connector
 
 The public AI endpoint exposes five read-only tools:
 
-- `waste_rule_info`
-- `list_waste_rules`
+- `waste_service_info`
+- `waste_rule_catalog`
 - `waste_source_status`
 - `waste_rule_preflight`
 - `permit_change_impact`

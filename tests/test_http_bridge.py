@@ -40,3 +40,16 @@ def test_commercial_decision_tools_publish_strict_field_level_schemas(monkeypatc
         assert "$ref" in scenario or "properties" in scenario or "allOf" in scenario, name
         assert "additionalProperties" not in scenario or scenario["additionalProperties"] is not True, name
         assert len(tools[name].get("description","")) >= 180, name
+
+
+def test_legacy_discovery_aliases_are_callable(monkeypatch):
+    pytest.importorskip("mcp.server")
+    pytest.importorskip("starlette.testclient")
+    from starlette.testclient import TestClient
+    from uk_waste_rule_mcp.production_bridge import build_server
+    monkeypatch.delenv("WASTE_PAYMENT_ENFORCED", raising=False)
+    with TestClient(build_server().streamable_http_app(json_response=True, stateless_http=True, host="testserver")) as client:
+        for request_id, name in enumerate(("waste_rule_info", "list_waste_rules"), start=10):
+            response=client.post("/mcp",json={"jsonrpc":"2.0","id":request_id,"method":"tools/call","params":{"name":name,"arguments":{}}})
+            assert response.status_code==200
+            assert "Unknown tool" not in response.text
