@@ -34,6 +34,8 @@ PRICES = {
 TOOL_TITLES = {
     "waste_service_info": "Waste regulatory service information",
     "waste_rule_catalog": "Supported waste regulatory routes",
+    "waste_rule_info": "Waste regulatory service information (legacy alias)",
+    "list_waste_rules": "Supported waste regulatory routes (legacy alias)",
     "waste_source_status": "Waste official-source status",
     "waste_source_audit": "Live waste source audit",
     "waste_source_registry": "Waste official-source registry",
@@ -47,6 +49,14 @@ TOOL_DESCRIPTIONS = {
         "FREE SERVICE/DISCOVERY metadata tool. Select this for questions about RegEvidenceHub Waste scope, "
         "available tools, which tools are FREE versus PAID, x402 payment mode, exact prices, jurisdiction, "
         "or service capabilities. Do NOT use for source freshness or a case-specific regulatory decision."
+    ),
+    "waste_rule_info": (
+        "LEGACY COMPATIBILITY alias for waste_service_info. Use waste_service_info for new integrations. "
+        "Returns the same free service/discovery metadata so previously installed connectors do not fail with Unknown tool."
+    ),
+    "list_waste_rules": (
+        "LEGACY COMPATIBILITY alias for waste_rule_catalog. Use waste_rule_catalog for new integrations. "
+        "Returns the same free supported-role/activity catalogue so previously installed connectors do not fail with Unknown tool."
     ),
     "waste_rule_catalog": (
         "FREE RULE-CATALOG tool. Select this when an agent needs the exact supported England waste roles, "
@@ -448,6 +458,14 @@ def build_server():
     @server.tool(description=TOOL_DESCRIPTIONS["waste_rule_catalog"], annotations=annotations("waste_rule_catalog"))
     def waste_rule_catalog(ctx: Context) -> dict[str, Any]:
         return _record("waste_rule_catalog", catalogue, meta=_meta(ctx))
+
+    @server.tool(name="waste_rule_info", description=TOOL_DESCRIPTIONS["waste_rule_info"], annotations=annotations("waste_rule_info"))
+    def waste_rule_info_legacy(ctx: Context) -> dict[str, Any]:
+        return _record("waste_rule_info", lambda: service_info(gate), meta=_meta(ctx))
+
+    @server.tool(name="list_waste_rules", description=TOOL_DESCRIPTIONS["list_waste_rules"], annotations=annotations("list_waste_rules"))
+    def list_waste_rules_legacy(ctx: Context) -> dict[str, Any]:
+        return _record("list_waste_rules", catalogue, meta=_meta(ctx))
 
     @server.tool(description=TOOL_DESCRIPTIONS["waste_source_status"], annotations=annotations("waste_source_status"))
     def waste_source_status(ctx: Context) -> dict[str, Any]:

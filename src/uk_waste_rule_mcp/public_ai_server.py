@@ -101,6 +101,30 @@ def build_public_ai_server() -> MCPServer:
         return catalogue()
 
     @server.tool(
+        name="waste_rule_info",
+        description="LEGACY COMPATIBILITY alias for waste_service_info. Use waste_service_info for new integrations. Returns the same payment-free service metadata so older installed connectors do not fail with Unknown tool.",
+        annotations=_annotations("Waste service information (legacy alias)"),
+        structured_output=True,
+    )
+    def waste_rule_info_legacy() -> dict[str, Any]:
+        return {
+            "product": PRODUCT, "version": __version__, "jurisdiction": "England",
+            "surface": "public_ai_payment_free", "tools": list(PUBLIC_AI_TOOL_NAMES),
+            "payment": "none_on_public_ai_surface", "fail_closed": True,
+            "source_health": source_health(),
+            "disclaimer": "Read-only preflight information only; not an Environment Agency decision, filing, permit, exemption, registration or legal advice.",
+        }
+
+    @server.tool(
+        name="list_waste_rules",
+        description="LEGACY COMPATIBILITY alias for waste_rule_catalog. Use waste_rule_catalog for new integrations. Returns the same payment-free supported-role/activity catalogue so older installed connectors do not fail with Unknown tool.",
+        annotations=_annotations("List waste rules (legacy alias)"),
+        structured_output=True,
+    )
+    def list_waste_rules_legacy() -> dict[str, Any]:
+        return catalogue()
+
+    @server.tool(
         description=(
             "FREE EVIDENCE-HEALTH tool. Use only to check whether the reviewed official GOV.UK / Environment Agency evidence "
             "is fresh, unchanged, available and decision-usable. It returns source-health status and never makes a waste-route "
