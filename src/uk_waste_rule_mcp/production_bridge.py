@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 import time
 from typing import Any
 
@@ -17,6 +18,9 @@ from .engine import (
     waste_preflight,
 )
 from .monitor import check_all_sources, source_health
+from .case_state import DurableCaseStore
+from .commercial import CommercialPlatformClient
+from .entitlement_token import verify_entitlement_token
 from .sources import source_registry
 from .schemas import CarrierRegistrationScenario, DigitalTrackingScenario, PermitChangeScenario, WasteRuleScenario
 
@@ -24,6 +28,20 @@ PUBLIC_ORIGIN = os.getenv("WASTE_PUBLIC_ORIGIN", "https://waste.regevidencehub.c
 MCP_URL = os.getenv("WASTE_PUBLIC_MCP_URL", f"{PUBLIC_ORIGIN}/mcp").strip()
 REGISTRY_NAME = "io.github.ChanghuLiu/uk-waste-rule-mcp"
 BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+
+SHARED_EXECUTION_ACTION = "waste_case_preflight"
+SHARED_EXECUTION_WORKFLOWS = {
+    "waste_rule_preflight": (WasteRuleScenario, waste_preflight),
+    "waste_carrier_broker_dealer_preflight": (CarrierRegistrationScenario, carrier_broker_dealer_registration_preflight),
+    "waste_digital_tracking_readiness": (DigitalTrackingScenario, digital_waste_tracking_receipt_readiness),
+    "waste_permit_change_preflight": (PermitChangeScenario, impact),
+}
+COMMERCIAL_CLIENT = CommercialPlatformClient()
+CASE_RUNTIME_DIR = os.getenv("WASTE_RUNTIME_DIR") or ("/data/waste-rule-mcp" if os.getenv("RAILWAY_ENVIRONMENT") else "/tmp/waste-rule-mcp")
+DURABLE_CASES = DurableCaseStore(CASE_RUNTIME_DIR, ttl_seconds=int(os.getenv("WASTE_CASE_TTL_SECONDS", "86400")))
+
+def shared_execution_enabled() -> bool:
+    return os.getenv("WASTE_SHARED_EXECUTION_ENABLED", "0").strip() == "1"
 
 PRICES = {
     "waste_rule_preflight": "$0.02",
@@ -322,6 +340,92 @@ def build_server():
     def discovery(request, route: str) -> None:
         marker = str(request.headers.get("x-mcp-commercial-actor","")).strip().lower()
         record_discovery(route, request.url.query, owned_probe=marker in {"owned","owned_ci","owner","test","smoke"})
+
+    @server.custom_route("/api/v1/continuation-case", methods=["POST"], include_in_schema=False)
+    async def continuation_case(request):
+        if not shared_execution_enabled():
+            return JSONResponse({"status":"shared_execution_disabled"}, status_code=503)
+        try:
+            body = await request.json()
+            action = str(body.get("action") or SHARED_EXECUTION_ACTION)
+            workflow = str(body.get("workflow") or "waste_rule_preflight")
+            if action != SHARED_EXECUTION_ACTION or workflow not in SHARED_EXECUTION_WORKFLOWS:
+                return JSONResponse({"status":"invalid_request","error_code":"unsupported_action"}, status_code=422)
+            model, _ = SHARED_EXECUTION_WORKFLOWS[workflow]
+            payload = model.model_validate(body.get("payload") or {}).model_dump(exclude_none=True)
+            source_bucket = str(body.get("source_bucket") or "direct")
+            classification = str(body.get("classification") or "unknown")
+            owner_test = bool(body.get("owner_test") or False)
+            if classification not in {"unknown","confirmed_external","owner_test","synthetic"}:
+                return JSONResponse({"status":"invalid_request","error_code":"invalid_classification"}, status_code=422)
+        except Exception as exc:
+            return JSONResponse({"status":"invalid_request","reason":str(exc)}, status_code=422)
+        row = DURABLE_CASES.create(
+            action=action, workflow=workflow, payload=payload, source_bucket=source_bucket,
+            classification=classification, owner_test=owner_test,
+        )
+        try:
+            continuation = await COMMERCIAL_CLIENT.issue_continuation(case_ref=row.case_ref, state_ref=row.state_ref)
+        except Exception:
+            return JSONResponse({"status":"commercial_unavailable"}, status_code=503)
+        return JSONResponse({
+            "product_id": COMMERCIAL_CLIENT.product_id,
+            "case_ref": row.case_ref,
+            "state_ref": row.state_ref,
+            "workflow": row.workflow,
+            "continuation_token": continuation["continuation_token"],
+            "expires_in_seconds": continuation.get("expires_in_seconds"),
+        })
+
+    @server.custom_route("/api/v1/execute-restored-case", methods=["POST"], include_in_schema=False)
+    async def execute_restored_case(request):
+        if not shared_execution_enabled():
+            return JSONResponse({"status":"shared_execution_disabled"}, status_code=503)
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"status":"invalid_request"}, status_code=422)
+        if body.get("contract_version") not in {None, "reh-execution-v1"}:
+            return JSONResponse({"status":"invalid_request","error_code":"unsupported_contract_version"}, status_code=422)
+        if body.get("product_id") not in {None, COMMERCIAL_CLIENT.product_id}:
+            return JSONResponse({"status":"invalid_request","error_code":"wrong_product"}, status_code=422)
+        if body.get("action") not in {None, SHARED_EXECUTION_ACTION}:
+            return JSONResponse({"status":"invalid_request","error_code":"unsupported_action"}, status_code=422)
+        try:
+            claims = await verify_entitlement_token(
+                str(body.get("entitlement_token") or ""),
+                platform_url=COMMERCIAL_CLIENT.platform_url,
+                expected_product_id=COMMERCIAL_CLIENT.product_id,
+            )
+        except ValueError:
+            return JSONResponse({"status":"forbidden"}, status_code=403)
+        row = DURABLE_CASES.get(str(body.get("state_ref") or ""))
+        if row is None:
+            return JSONResponse({"status":"case_unavailable","error_code":"state_not_found"}, status_code=404)
+        if row.action != SHARED_EXECUTION_ACTION or row.workflow not in SHARED_EXECUTION_WORKFLOWS:
+            return JSONResponse({"status":"invalid_request","error_code":"stored_action_mismatch"}, status_code=422)
+        _, executor = SHARED_EXECUTION_WORKFLOWS[row.workflow]
+        try:
+            decision = executor(dict(row.payload))
+        except Exception:
+            return JSONResponse({
+                "contract_version":"reh-execution-v1","product_id":COMMERCIAL_CLIENT.product_id,
+                "status":"failed","execution_id":f"waste_{secrets.token_hex(12)}",
+                "result":None,"error_code":"execution_unavailable",
+            }, status_code=503)
+        return JSONResponse({
+            "contract_version":"reh-execution-v1",
+            "product_id":COMMERCIAL_CLIENT.product_id,
+            "status":"executed",
+            "execution_id":f"waste_{secrets.token_hex(12)}",
+            "result":{
+                "gateway_status":"OK",
+                "workflow":row.workflow,
+                "decision":decision,
+                "entitlement_code":str(claims.get("entitlement_code") or ""),
+            },
+            "error_code":None,
+        })
 
     @server.custom_route("/", methods=["GET"], include_in_schema=False)
     async def landing(request):
