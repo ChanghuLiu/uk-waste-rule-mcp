@@ -66,7 +66,9 @@ def test_missing_role_is_incomplete():
     assert result["decision"]["status"] == "INCOMPLETE"
 
 
-def test_carrier_has_duty_of_care_review():
+def test_carrier_has_duty_of_care_review(monkeypatch):
+    import uk_waste_rule_mcp.engine as engine
+    monkeypatch.setattr(engine, "_source_gate", lambda _ids: {"decision_usable": True})
     result = waste_preflight({
         "nation": "England",
         "role": "carrier",
