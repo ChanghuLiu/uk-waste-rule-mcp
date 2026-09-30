@@ -18,7 +18,7 @@ from .engine import (
     permit_change_impact as impact,
     waste_preflight,
 )
-from .monitor import check_all_sources, source_health
+from .monitor import refresh_source_registry, source_health
 from .case_state import DurableCaseStore
 from .commercial import CommercialPlatformClient
 from .entitlement_token import verify_entitlement_token
@@ -105,7 +105,7 @@ TOOL_DESCRIPTIONS = {
     ),
     "waste_source_audit": (
         "FREE LIVE SOURCE-AUDIT tool. Select only when a fresh network check of monitored official sources "
-        "and fingerprint comparison is required. It does not accept new baselines or change reviewed evidence. "
+        "and fingerprint comparison is required. It persists only the latest observation state; it does not accept new baselines or change reviewed evidence. "
         "Do NOT use for a waste-route decision; use waste_rule_preflight after source health is established."
     ),
     "waste_source_registry": (
@@ -650,7 +650,7 @@ def build_server():
 
     @server.custom_route("/source-audit", methods=["GET"], include_in_schema=False)
     async def source_audit(_request):
-        checked=check_all_sources()
+        checked=refresh_source_registry()
         return JSONResponse({"health":source_health(checked),"checked_sources":checked},headers={"Cache-Control":"no-store"})
 
     @server.custom_route("/pricing", methods=["GET"], include_in_schema=False)
@@ -756,7 +756,7 @@ def build_server():
 
     @server.tool(description=TOOL_DESCRIPTIONS["waste_source_audit"], annotations=annotations("waste_source_audit"))
     def waste_source_audit(ctx: Context) -> dict[str, Any]:
-        return _record("waste_source_audit", lambda: (lambda checked: source_health(checked) | {"checked_sources":checked})(check_all_sources()), meta=_meta(ctx))
+        return _record("waste_source_audit", lambda: (lambda checked: source_health(checked) | {"checked_sources":checked})(refresh_source_registry()), meta=_meta(ctx))
 
     @server.tool(description=TOOL_DESCRIPTIONS["waste_source_registry"], annotations=annotations("waste_source_registry"))
     def waste_source_registry(ctx: Context) -> list[dict[str, Any]]:
@@ -823,12 +823,34 @@ def main() -> None:
     public_ai_server=build_public_ai_server()
     public_ai_app=public_ai_server.streamable_http_app(host=host,json_response=True,stateless_http=True)
 
+    refresh_interval=max(300.0,float(os.getenv("WASTE_SOURCE_REFRESH_INTERVAL_SECONDS","21600")))
+
+    async def refresh_loop():
+        while True:
+            await asyncio.sleep(refresh_interval)
+            try:
+                await asyncio.to_thread(refresh_source_registry)
+            except Exception as exc:
+                print(f"WASTE_SOURCE_REFRESH_ERROR {exc!r}",flush=True)
+
     @asynccontextmanager
     async def lifespan(_app):
         async with AsyncExitStack() as stack:
             await stack.enter_async_context(commercial_server.session_manager.run())
             await stack.enter_async_context(public_ai_server.session_manager.run())
-            yield
+            try:
+                await asyncio.to_thread(refresh_source_registry)
+            except Exception as exc:
+                print(f"WASTE_SOURCE_STARTUP_REFRESH_ERROR {exc!r}",flush=True)
+            refresh_task=asyncio.create_task(refresh_loop())
+            try:
+                yield
+            finally:
+                refresh_task.cancel()
+                try:
+                    await refresh_task
+                except asyncio.CancelledError:
+                    pass
 
     app=Starlette(routes=[
         Route("/waste-rule-preflight",endpoint=plugin_product_page,methods=["GET"]),
