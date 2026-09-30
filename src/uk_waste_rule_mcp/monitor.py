@@ -10,14 +10,16 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
+from threading import Lock
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from .sources import source_registry, source_registry_path
+from .sources import set_runtime_source_registry, source_registry, source_registry_path
 
 DEFAULT_MAX_AGE_HOURS = 48.0
 USER_AGENT = "RegEvidenceHub-Waste-Source-Monitor/0.1"
+_REFRESH_LOCK = Lock()
 
 
 class _VisibleTextParser(HTMLParser):
@@ -110,6 +112,25 @@ def check_all_sources(*, timeout: float = 20.0, now: datetime | None = None) -> 
     with ThreadPoolExecutor(max_workers=min(4, len(sources))) as executor:
         futures = [executor.submit(check_source, source, timeout=timeout, now=now) for source in sources]
         return [future.result() for future in futures]
+
+
+def refresh_source_registry(*, timeout: float = 20.0, now: datetime | None = None, persist: bool = True) -> list[dict[str, Any]]:
+    """Fetch monitored sources and publish fresh observation state.
+
+    Reviewed baseline hashes are never changed here. Latest observations are
+    made immediately visible to decision code in this process and, when
+    possible, persisted for restart continuity.
+    """
+
+    with _REFRESH_LOCK:
+        checked = check_all_sources(timeout=timeout, now=now)
+        set_runtime_source_registry(checked)
+        if persist:
+            try:
+                write_registry(source_registry_path(), checked)
+            except OSError:
+                pass
+        return checked
 
 
 def source_health(sources: list[dict[str, Any]] | None = None, *, now: datetime | None = None) -> dict[str, Any]:
