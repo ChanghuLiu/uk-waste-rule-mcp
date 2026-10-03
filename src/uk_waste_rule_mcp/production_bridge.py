@@ -9,6 +9,7 @@ from urllib.parse import parse_qs
 from typing import Any
 
 from . import __version__
+from .report_ui import message_response, paid_report_html
 from .analytics import public_usage_summary, record_call, record_discovery
 from .engine import (
     PRODUCT,
@@ -40,8 +41,11 @@ SHARED_EXECUTION_WORKFLOWS = {
 
 
 def _waste_recovery_bootstrap_response():
-    from starlette.responses import HTMLResponse
-    return HTMLResponse("""<!doctype html><html><meta charset=utf-8><meta name=referrer content=no-referrer><title>Recover report</title><main><h1>Opening recovered report…</h1><p id=status>Verifying access</p></main><script>(()=>{const p=new URLSearchParams(location.hash.slice(1));history.replaceState(null,'',location.pathname);const checkout_id=p.get('checkout_id'),report_session=p.get('report_session');if(!checkout_id||!report_session){document.getElementById('status').textContent='Recovery link is missing or expired.';return;}fetch('/api/v1/report-access/redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({checkout_id,report_session})}).then(r=>{if(!r.ok)throw Error();location.replace('/waste-report/checkout-success?checkout_id='+encodeURIComponent(checkout_id));}).catch(()=>{document.getElementById('status').textContent='Payment may still be processing, or this recovery link is invalid, expired, or already used.';});})();</script></html>""", headers={"Cache-Control":"no-store", "Referrer-Policy":"no-referrer", "Content-Security-Policy":"default-src 'none'; script-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"})
+    return message_response(
+        "Opening recovered report…", "Verifying access",
+        script="(()=>{const p=new URLSearchParams(location.hash.slice(1));history.replaceState(null,'',location.pathname);const checkout_id=p.get('checkout_id'),report_session=p.get('report_session');if(!checkout_id||!report_session){document.getElementById('status').textContent='Recovery link is missing or expired.';return;}fetch('/api/v1/report-access/redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({checkout_id,report_session})}).then(r=>{if(!r.ok)throw Error();location.replace('/waste-report/checkout-success?checkout_id='+encodeURIComponent(checkout_id));}).catch(()=>{document.getElementById('status').textContent='Payment may still be processing, or this recovery link is invalid, expired, or already used.';});})();", status_id=True,
+    )
+
 COMMERCIAL_CLIENT = CommercialPlatformClient()
 CASE_RUNTIME_DIR = os.getenv("WASTE_RUNTIME_DIR") or ("/data/waste-rule-mcp" if os.getenv("RAILWAY_ENVIRONMENT") else "/tmp/waste-rule-mcp")
 DURABLE_CASES = DurableCaseStore(CASE_RUNTIME_DIR, ttl_seconds=int(os.getenv("WASTE_CASE_TTL_SECONDS", "86400")))
@@ -492,7 +496,7 @@ footer a{white-space:nowrap}
             model, _executor = SHARED_EXECUTION_WORKFLOWS[workflow]
             validated_payload = model.model_validate(payload).model_dump(exclude_none=True)
         except Exception as exc:
-            return HTMLResponse(f"<main><h1>Checkout could not start</h1><p>{escape(str(exc))}</p><p><a href='/waste-report'>Review the report form</a></p></main>", status_code=422)
+            return message_response("Checkout could not start", str(exc), 422)
 
         pending_token = REPORT_CHECKOUTS.create(workflow=workflow, payload=validated_payload)
         source_channel = "direct"
@@ -506,7 +510,7 @@ footer a{white-space:nowrap}
             REPORT_CHECKOUTS.attach_checkout(pending_token, checkout["checkout_id"])
         except Exception:
             REPORT_CHECKOUTS.discard(pending_token)
-            return HTMLResponse("<main><h1>Checkout is temporarily unavailable</h1><p>Your case has not been charged. Try again later.</p><a href='/waste-report'>Return to the report form</a></main>", status_code=503)
+            return message_response('Checkout is temporarily unavailable', 'Your case has not been charged. Try again later.', 503)
         response = RedirectResponse(checkout["checkout_url"], status_code=303)
         response.set_cookie(key=f"report_claim_{checkout['checkout_id']}", value=checkout["report_claim_token"], max_age=1800, httponly=True,
                             secure=PUBLIC_ORIGIN.startswith("https://"), samesite="lax", path="/waste-report/checkout-success")
@@ -519,40 +523,40 @@ footer a{white-space:nowrap}
         if not checkout_id:
             checkout_id = next((key.removeprefix("report_claim_") for key in request.cookies if key.startswith("report_claim_")), "")
         if not checkout_id:
-            return HTMLResponse("""<!doctype html><html><meta charset=utf-8><meta name=referrer content=no-referrer><title>Recover report</title><main><h1>Opening recovered report…</h1><p id=status>Verifying access</p></main><script>(()=>{const p=new URLSearchParams(location.hash.slice(1));history.replaceState(null,'',location.pathname);const checkout_id=p.get('checkout_id'),report_session=p.get('report_session');if(!checkout_id||!report_session){document.getElementById('status').textContent='Recovery link is missing or expired.';return;}fetch('/api/v1/report-access/redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({checkout_id,report_session})}).then(r=>{if(!r.ok)throw Error();location.replace('/waste-report/checkout-success?checkout_id='+encodeURIComponent(checkout_id));}).catch(()=>{document.getElementById('status').textContent='Payment may still be processing, or this recovery link is invalid, expired, or already used.';});})();</script></html>""", headers={"Cache-Control":"no-store", "Referrer-Policy":"no-referrer", "Content-Security-Policy":"default-src 'none'; script-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"})
+            return _waste_recovery_bootstrap_response()
         row = REPORT_CHECKOUTS.get_by_checkout_id(checkout_id)
         if row is None:
             if "text/html" in request.headers.get("accept", "").lower():
                 return _waste_recovery_bootstrap_response()
-            return HTMLResponse("<main><h1>Report unavailable</h1><p>Use verified-email recovery or restart checkout.</p></main>", status_code=403)
+            return message_response('Report unavailable', 'Use verified-email recovery or restart checkout.', 403)
         report_session = request.cookies.get(f"report_session_{checkout_id}")
         if not report_session:
             claim = request.cookies.get(f"report_claim_{checkout_id}")
             if not claim:
-                return HTMLResponse("<main><h1>Report unavailable</h1><p>Use verified-email recovery.</p></main>", status_code=403)
+                return message_response('Report unavailable', 'Use verified-email recovery.', 403)
             try:
                 claimed = await COMMERCIAL_CLIENT.claim_report_access(checkout_id=checkout_id, report_claim_token=claim)
                 report_session = str(claimed["report_session"])
             except Exception:
-                return HTMLResponse("<main><h1>Payment pending</h1><p>We could not verify paid access yet. Refresh this page or recover by email.</p></main>", status_code=403)
+                return message_response('Payment pending', 'We could not verify paid access yet. Refresh this page or recover by email.', 403)
         try:
             verified = await COMMERCIAL_CLIENT.verify_report_access(checkout_id=checkout_id, report_session=report_session)
         except Exception:
             verified = False
         if not verified:
             if "text/html" in request.headers.get("accept", "").lower() and request.cookies.get(f"report_session_{checkout_id}"):
-                return HTMLResponse("""<!doctype html><html><meta charset=utf-8><meta name=referrer content=no-referrer><title>Recover report</title><main><h1>Opening recovered report…</h1><p id=status role=status aria-live=polite>Verifying access</p></main><script>(()=>{const p=new URLSearchParams(location.hash.slice(1));history.replaceState(null,'',location.pathname);const checkout_id=p.get('checkout_id'),report_session=p.get('report_session');if(!checkout_id||!report_session){document.getElementById('status').textContent='Recovery link is missing or expired.';return;}fetch('/api/v1/report-access/redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({checkout_id,report_session})}).then(r=>{if(!r.ok)throw Error();location.replace('/waste-report/checkout-success?checkout_id='+encodeURIComponent(checkout_id));}).catch(()=>{document.getElementById('status').textContent='Payment may still be processing, or this recovery link is invalid, expired, or already used.';});})();</script></html>""", headers={"Cache-Control":"no-store", "Referrer-Policy":"no-referrer", "Content-Security-Policy":"default-src 'none'; script-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"})
-            return HTMLResponse("<main><h1>Report unavailable</h1><p>Access could not be verified.</p></main>", status_code=403)
+                return _waste_recovery_bootstrap_response()
+            return message_response('Report unavailable', 'Access could not be verified.', 403)
         model, executor = SHARED_EXECUTION_WORKFLOWS[row["workflow"]]
         report = executor(model.model_validate(row["payload"]).model_dump(exclude_none=True))
-        response = HTMLResponse(f"""<!doctype html><html lang="en"><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>Your waste compliance report</title><main style="font-family:system-ui;max-width:900px;margin:40px auto;padding:0 20px;line-height:1.55"><h1>Your England Waste Compliance Report</h1><p>Verified paid access. Review the cited official sources and resolve any REVIEW_REQUIRED or missing-information findings before acting.</p><pre style="white-space:pre-wrap;overflow-wrap:anywhere">{escape(json.dumps(report, indent=2, ensure_ascii=False))}</pre><p>Order reference: <code>{escape(checkout_id)}</code></p><a href="/waste-report/recover">Recover access by verified email</a></main></html>""", headers={"Cache-Control":"private, no-store", "Referrer-Policy":"no-referrer"})
+        response = HTMLResponse(paid_report_html(report, checkout_id), headers={"Cache-Control":"private, no-store", "Referrer-Policy":"no-referrer", "Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"})
         response.set_cookie(key=f"report_session_{checkout_id}", value=report_session, max_age=86400, httponly=True, secure=PUBLIC_ORIGIN.startswith("https://"), samesite="lax", path="/waste-report/checkout-success")
         response.delete_cookie(key=f"report_claim_{checkout_id}", path="/waste-report/checkout-success")
         return response
 
     @server.custom_route("/waste-report/checkout-cancelled", methods=["GET"], include_in_schema=False)
     async def waste_report_cancelled(_request):
-        return HTMLResponse("<main><h1>Checkout cancelled</h1><p>No paid report was created.</p><a href='/waste-report'>Return to Waste report</a></main>")
+        return message_response('Checkout cancelled', 'No paid report was created.', 200)
 
     @server.custom_route("/api/v1/report-access/redeem", methods=["POST"], include_in_schema=False)
     async def redeem_waste_report(request):
