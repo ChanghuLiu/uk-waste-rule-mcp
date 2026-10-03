@@ -353,7 +353,123 @@ def build_server():
 
     @server.custom_route("/waste-report", methods=["GET"], include_in_schema=False)
     async def waste_report_page(_request):
-        return HTMLResponse("""<!doctype html><html lang="en"><meta charset="utf-8"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Waste compliance report — RegEvidenceHub</title><main style="font-family:system-ui;max-width:820px;margin:40px auto;padding:0 20px;line-height:1.55"><h1>England Waste Compliance Preflight Report</h1><p>Run one evidence-linked regulatory preflight. Your case details stay with the Waste service; only checkout email and bounded purchase metadata go to the shared payment service. No product account is required.</p><form method="post" action="/waste-report/checkout"><label>Preflight type <select name="workflow"><option value="waste_rule_preflight">Waste rules and permit route — £19</option><option value="waste_carrier_broker_dealer_preflight">Carrier, broker or dealer registration — £19</option><option value="waste_digital_tracking_readiness">Digital Waste Tracking readiness — £19</option><option value="waste_permit_change_preflight">Permit change impact — £19</option></select></label><p><label>Scenario JSON<br><textarea name="payload" required rows="12" style="width:100%" placeholder='{"nation":"England","role":"receiver","activities":["receive_waste"]}'></textarea></label></p><p><label>Email for checkout and verified recovery<br><input name="contact_email" type="email" autocomplete="email" required maxlength="254"></label></p><button type="submit">Continue to secure Stripe Checkout</button></form><p><a href="/waste-report/recover">Recover a paid report</a> · <a href="/pricing">API pricing</a></p><p>Informational preflight only; not Environment Agency approval or legal advice.</p></main></html>""")
+        return HTMLResponse("""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Waste compliance report — RegEvidenceHub</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6fb;color:#18324b;font:16px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:#1d4ed8;text-underline-offset:3px}
+.wrap{max-width:1080px;margin:0 auto;padding:48px 28px 32px}
+.brand{display:flex;align-items:center;gap:10px;margin:0 0 32px;color:#1d4ed8;font-size:.8rem;font-weight:750;letter-spacing:.09em}
+.brand-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:#1d4ed8;color:white;font-size:1rem;letter-spacing:0}
+.hero{max-width:760px;margin-bottom:30px}
+.tag{display:inline-block;padding:4px 11px;border:1px solid #cfdaeb;border-radius:99px;background:#fff;color:#44607a;font-size:.8rem;font-weight:650}
+h1{margin:14px 0 14px;font-size:clamp(1.9rem,4vw,2.7rem);line-height:1.15;letter-spacing:-.035em;color:#122b44}
+.hero p{margin:0;color:#506780;max-width:700px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:24px;align-items:start}
+.card{border:1px solid #dce5f0;border-radius:18px;background:#fff;box-shadow:0 10px 30px #19365508;padding:30px}
+h2{margin:0 0 7px;font-size:1.25rem;line-height:1.3;letter-spacing:-.02em}
+.subtext{margin:0;color:#596f86;font-size:.93rem}
+.field{margin-top:25px}
+label{display:block;font-weight:650;margin-bottom:8px;color:#18324b}
+.helper{display:block;margin:7px 0 0;color:#596f86;font-size:.86rem;line-height:1.5}
+select,input,textarea{display:block;width:100%;border:1px solid #b9c9dc;border-radius:10px;background:#fff;color:#19334d;font:inherit;padding:12px 14px}
+select,input{min-height:50px}
+select{cursor:pointer}
+textarea{min-height:220px;resize:vertical;font:14px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;background:#f9fbfe}
+textarea::placeholder{color:#657c94;opacity:1}
+input::placeholder{color:#657c94}
+:where(select,input,textarea,button,a,summary):focus-visible{outline:3px solid #91b8ff;outline-offset:3px}
+button{display:block;width:100%;min-height:52px;margin-top:28px;padding:13px 18px;border:0;border-radius:10px;background:#1d4ed8;color:#fff;font:700 1rem system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 10px #1d4ed81a}
+button:hover{background:#173faf}
+.payment-note{margin:10px 0 0;text-align:center;color:#596f86;font-size:.8rem}
+.summary-card{padding:26px;background:#163451;color:#fff;border:1px solid #163451;border-radius:18px}
+.summary-card h2{font-size:1rem;color:#d6e5f5;font-weight:650}
+.price{margin:16px 0 5px;font-size:2.8rem;font-weight:750;letter-spacing:-.045em;line-height:1.1}
+.price span{font-size:.85rem;font-weight:550;letter-spacing:0;color:#c6d9eb}
+.summary-intro{margin:0 0 23px;color:#c6d9eb;font-size:.88rem}
+.features{list-style:none;padding:0;margin:0;border-top:1px solid #ffffff26}
+.features li{position:relative;padding:15px 0 15px 23px;border-bottom:1px solid #ffffff26;font-size:.9rem;line-height:1.5}
+.features li::before{content:"✓";position:absolute;left:0;color:#9fdbcc;font-weight:700}
+.features strong{display:block;font-size:.93rem}
+.features span{color:#c6d9eb;font-size:.85rem}
+.access-note{margin:20px 0 0;color:#c6d9eb;font-size:.82rem}
+.recovery{margin-top:22px;border:1px solid #dce5f0;border-radius:12px;background:#fff;padding:17px 20px;color:#314e69}
+.recovery summary{font-weight:650;cursor:pointer}
+.recovery p{margin:12px 0 0;font-size:.9rem;color:#596f86}
+.recovery a{display:inline-block;margin-top:10px;font-size:.92rem;font-weight:650}
+footer{display:flex;justify-content:space-between;align-items:start;gap:22px;margin-top:30px;color:#65778c;font-size:.8rem}
+footer p{margin:0;max-width:730px}
+footer a{white-space:nowrap}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.wrap{padding:28px 20px}.brand{margin-bottom:24px}.summary-card{order:2}.card{padding:24px}.hero{margin-bottom:24px}.features{display:grid;grid-template-columns:1fr 1fr;column-gap:18px}footer{flex-direction:column;gap:12px}}
+@media(max-width:460px){.wrap{padding:24px 16px}.card,.summary-card{padding:22px 20px}h1{font-size:1.9rem}.features{grid-template-columns:1fr}.layout{gap:18px}select{font-size:.9rem}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<p class="brand"><span class="brand-mark" aria-hidden="true">R</span>REG EVIDENCE HUB · WASTE</p>
+<header class="hero">
+<span class="tag">England waste preflight</span>
+<h1>England Waste Compliance Preflight Report</h1>
+<p>Prepare an evidence-linked report for your waste operation. Choose a preflight, add your scenario and continue to secure checkout.</p>
+</header>
+<div class="layout">
+<section class="card" aria-labelledby="form-title">
+<h2 id="form-title">Prepare your report</h2>
+<p class="subtext">No product account is required.</p>
+<form method="post" action="/waste-report/checkout">
+<div class="field">
+<label for="workflow">Preflight type</label>
+<select id="workflow" name="workflow">
+<option value="waste_rule_preflight">Waste rules and permit route — £19</option>
+<option value="waste_carrier_broker_dealer_preflight">Carrier, broker or dealer registration — £19</option>
+<option value="waste_digital_tracking_readiness">Digital Waste Tracking readiness — £19</option>
+<option value="waste_permit_change_preflight">Permit change impact — £19</option>
+</select>
+</div>
+<div class="field">
+<label for="payload">Scenario details (JSON)</label>
+<textarea id="payload" name="payload" required rows="9" spellcheck="false" aria-describedby="scenario-help" placeholder='{"nation":"England","role":"receiver","activities":["receive_waste"]}'></textarea>
+<p class="helper" id="scenario-help">Paste the scenario JSON for your selected preflight. Include the facts you know; uncertain or missing facts remain explicit in the report.</p>
+</div>
+<div class="field">
+<label for="contact-email">Checkout email</label>
+<input id="contact-email" name="contact_email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com" aria-describedby="email-help">
+<p class="helper" id="email-help">Use this same email to recover your report during its access period.</p>
+</div>
+<button type="submit">Continue to secure Stripe Checkout →</button>
+<p class="payment-note">Stripe handles payment. Your case details stay with the Waste service.</p>
+</form>
+</section>
+<aside class="summary-card" aria-labelledby="summary-title">
+<h2 id="summary-title">One evidence-linked report</h2>
+<p class="price">£19.00 <span>GBP</span></p>
+<p class="summary-intro">One-time payment · No subscription</p>
+<ul class="features">
+<li><strong>Deterministic preflight</strong><span>A report for the scenario you supply.</span></li>
+<li><strong>Official-source evidence</strong><span>Review the cited sources and any missing facts.</span></li>
+<li><strong>24-hour access</strong><span>Open and recover your report during the access period.</span></li>
+</ul>
+<p class="access-note">Email recovery does not extend an expired access period.</p>
+</aside>
+</div>
+<details class="recovery">
+<summary>Already purchased a report?</summary>
+<p>Use your order reference and original checkout email to recover access before it expires.</p>
+<a href="/waste-report/recover">Recover a paid report →</a>
+</details>
+<footer>
+<p>Informational preflight only; not Environment Agency approval or legal advice. Resolve review-required findings before acting.</p>
+<a href="/pricing">API pricing</a>
+</footer>
+</main>
+</body>
+</html>""")
 
     @server.custom_route("/waste-report/checkout", methods=["POST"], include_in_schema=False)
     async def waste_report_checkout(request):
