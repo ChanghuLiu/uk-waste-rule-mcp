@@ -71,6 +71,24 @@ def test_waste_report_checkout_claim_verify_unpaid_and_recovery(monkeypatch, tmp
         assert "?" not in fake.checkout_args["success_url"]
         assert fake.checkout_args["contact_email"] == "buyer@example.test"
 
+        # An explicit order identifier wins over a stale cookie from another order.
+        specific_order = await request(
+            "GET", "/waste-report/checkout-success?checkout_id=co_waste",
+            headers={"accept": "text/html", "cookie": "report_session_oldorder=expired; report_claim_co_waste=claim-secret"},
+        )
+        assert specific_order.status_code == 200
+        assert "Your England Waste Compliance Report" in specific_order.text
+
+        # If an old cookie points to an order no longer in the local store, keep
+        # the browser bootstrap available so the current email fragment can redeem.
+        unknown_stale = await request(
+            "GET", "/waste-report/checkout-success",
+            headers={"accept": "text/html", "cookie": "report_session_unknownorder=expired"},
+        )
+        assert unknown_stale.status_code == 200
+        assert "/api/v1/report-access/redeem" in unknown_stale.text
+        assert "checkout_id='+encodeURIComponent(checkout_id)" in unknown_stale.text
+
         # Same checkout claim is denied while Stripe reports no paid order.
         fake.paid = False
         denied = await request("GET", "/waste-report/checkout-success", headers={"cookie": "report_claim_co_waste=claim-secret"})
