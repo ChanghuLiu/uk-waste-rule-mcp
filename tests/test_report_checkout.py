@@ -30,6 +30,8 @@ def test_waste_report_checkout_claim_verify_unpaid_and_recovery(monkeypatch, tmp
         def __init__(self):
             self.paid = True
             self.recovery = []
+            self.recovery_result = True
+            self.recovery_error = False
 
         async def create_report_checkout(self, **kwargs):
             self.checkout_args = kwargs
@@ -45,7 +47,9 @@ def test_waste_report_checkout_claim_verify_unpaid_and_recovery(monkeypatch, tmp
 
         async def start_report_recovery(self, *, checkout_id, contact_email):
             self.recovery.append((checkout_id, contact_email))
-            return True
+            if self.recovery_error:
+                raise RuntimeError("capture transport unavailable")
+            return self.recovery_result
 
     fake = FakeCommercial()
     monkeypatch.setattr(bridge, "COMMERCIAL_CLIENT", fake)
@@ -74,16 +78,37 @@ def test_waste_report_checkout_claim_verify_unpaid_and_recovery(monkeypatch, tmp
         assert "Your England Waste Compliance Report" not in denied.text
 
         fake.paid = True
+        recover_page = await request("GET", "/waste-report/recover?checkout_id=co_%3Cwaste%3E")
+        assert recover_page.status_code == 200
+        assert "Recover your paid report" in recover_page.text
+        assert "style-src 'unsafe-inline'" in recover_page.headers["content-security-policy"]
+        assert 'value="co_&lt;waste&gt;"' in recover_page.text
         report = await request("GET", "/waste-report/checkout-success", headers={"cookie": "report_claim_co_waste=claim-secret"})
         assert report.status_code == 200
         assert "Your England Waste Compliance Report" in report.text
         assert "report_session_co_waste" in report.headers["set-cookie"]
         assert "claim-secret" not in report.text and "session-secret" not in report.text
 
+        fake.paid = False
+        stale_session = await request("GET", "/waste-report/checkout-success", headers={"accept": "text/html", "cookie": "report_session_co_waste=expired-session"})
+        assert stale_session.status_code == 200
+        assert "location.hash" in stale_session.text and "/api/v1/report-access/redeem" in stale_session.text
+        fake.paid = True
+
         recovered = await request("POST", "/api/v1/report-access/recovery", json={"checkout_id": "co_waste", "contact_email": "buyer@example.test"})
         assert recovered.status_code == 200
         assert "If a paid report matches" in recovered.text
         assert fake.recovery == [("co_waste", "buyer@example.test")]
+
+        fake.recovery_result = False
+        unavailable = await request("POST", "/api/v1/report-access/recovery", json={"checkout_id": "co_waste", "contact_email": "buyer@example.test"})
+        assert unavailable.status_code == 503
+        fake.recovery_error = True
+        failed = await request("POST", "/api/v1/report-access/recovery", json={"checkout_id": "co_waste", "contact_email": "buyer@example.test"})
+        assert failed.status_code == 503
+        invalid = await request("POST", "/api/v1/report-access/recovery", json={"checkout_id": "", "contact_email": "bad"})
+        assert invalid.status_code == 422
+        assert len(fake.recovery) == 3
 
         wrong_session = await request("POST", "/api/v1/report-access/redeem", json={"checkout_id": "co_waste", "report_session": "another-account-session"})
         assert wrong_session.status_code == 403
