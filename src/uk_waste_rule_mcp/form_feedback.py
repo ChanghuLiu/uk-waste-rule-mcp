@@ -30,6 +30,7 @@ function fieldError(f,message){
 function clear(f){f.removeAttribute('aria-invalid');const p=document.getElementById(f.id+'-error');if(p)p.hidden=true;}
 function problem(f){
  const name=label(f),v=f.validity;
+ if(v.customError)return f.validationMessage;
  if(f.name==='checkout_id'&&(f.value.trim().length<32||f.value.trim().length>64))return 'Enter the complete order reference saved with your purchase (32–64 characters).';
  if(v.valueMissing)return f.type==='checkbox'?'Tick “'+name+'” to continue.':f.tagName==='SELECT'?'Choose an option for '+name+'.':'Enter '+name+'.';
  if(v.typeMismatch&&f.type==='email')return 'Enter a valid email address, for example you@example.com.';

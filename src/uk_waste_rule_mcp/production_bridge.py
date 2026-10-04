@@ -12,6 +12,7 @@ from typing import Any
 
 from . import __version__
 from .report_ui import message_response, paid_report_html
+from .report_questions import QuestionFormError, questions_html, scenario_from_questions, STYLE as QUESTION_STYLE, SCRIPT as QUESTION_SCRIPT
 from .analytics import public_usage_summary, record_call, record_discovery
 from .engine import (
     PRODUCT,
@@ -59,7 +60,12 @@ SHARED_EXECUTION_WORKFLOWS = {
 
 
 @feedback_page
-def _waste_report_form(values=None, errors=None):
+def _waste_report_form(values=None, errors=None, error_fields=None):
+    values = dict(values or {})
+    workflow = str(values.get("workflow") or "waste_rule_preflight")
+    if workflow not in SHARED_EXECUTION_WORKFLOWS:
+        workflow = "waste_rule_preflight"
+    values["workflow"] = workflow
     markup = """<!doctype html>
 <html lang="en">
 <head>
@@ -123,7 +129,7 @@ footer a{white-space:nowrap}
 <header class="hero">
 <span class="tag">England waste preflight</span>
 <h1>England Waste Compliance Preflight Report</h1>
-<p>Prepare an evidence-linked report for your waste operation. Choose a preflight, add your scenario and continue to secure checkout.</p>
+<p>Prepare an evidence-linked report for your waste operation. Choose a report type, answer the questions and continue to secure checkout.</p>
 </header>
 <div class="layout">
 <section class="card" aria-labelledby="form-title">
@@ -139,11 +145,7 @@ footer a{white-space:nowrap}
 <option value="waste_permit_change_preflight">Permit change impact — £19</option>
 </select>
 </div>
-<div class="field">
-<label for="payload">Scenario details (JSON)</label>
-<textarea id="payload" name="payload" required rows="9" spellcheck="false" aria-describedby="scenario-help" placeholder='{"nation":"England","role":"receiver","activities":["receive_waste"]}'></textarea>
-<p class="helper" id="scenario-help">Paste the scenario JSON for your selected preflight. Include the facts you know; uncertain or missing facts remain explicit in the report.</p>
-</div>
+@@QUESTIONS@@
 <div class="field">
 <label for="contact-email">Checkout email</label>
 <input id="contact-email" name="contact_email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com" aria-describedby="email-help">
@@ -177,7 +179,11 @@ footer a{white-space:nowrap}
 </main>
 </body>
 </html>"""
-    fields = {message: "contact-email" if "email" in message.lower() else "workflow" if message.startswith("Preflight type") else "payload" for message in (errors or [])}
+    fields = {message: "contact-email" if "email" in message.lower() else "workflow" if message.startswith("Preflight type") else "" for message in (errors or [])}
+    fields.update(error_fields or {})
+    markup = markup.replace("@@QUESTIONS@@", questions_html(workflow, values))
+    markup = markup.replace("</style>", QUESTION_STYLE + "</style>", 1)
+    markup = markup.replace("</body>", "<script>" + QUESTION_SCRIPT + "</script></body>", 1)
     markup = markup.replace('<form method="post" action="/waste-report/checkout">', error_summary(errors, fields) + '<form method="post" action="/waste-report/checkout">', 1)
     return bind_form_values(markup, values or {})
 
@@ -506,6 +512,7 @@ def build_server():
     async def waste_report_checkout(request):
         from html import escape
         form = {}
+        error_fields = {}
         content_type = request.headers.get("content-type", "")
         try:
             if "application/json" in content_type:
@@ -514,11 +521,14 @@ def build_server():
                 parsed = parse_qs((await request.body()).decode("utf-8", "replace"), keep_blank_values=True)
                 form = {key: values[-1] for key, values in parsed.items()}
             workflow = str(form.get("workflow") or "")
-            payload_value = form.get("payload")
-            payload = json.loads(payload_value) if isinstance(payload_value, str) else payload_value
-            contact_email = str(form.get("contact_email") or "").strip()
             if workflow not in SHARED_EXECUTION_WORKFLOWS:
                 raise ValueError("Preflight type: choose an option from the supported list.")
+            if form.get("form_version") == "questions-v1" and "application/json" not in content_type:
+                payload = scenario_from_questions(form, workflow)
+            else:
+                payload_value = form.get("payload")
+                payload = json.loads(payload_value) if isinstance(payload_value, str) else payload_value
+            contact_email = str(form.get("contact_email") or "").strip()
             if not isinstance(payload, dict):
                 raise ValueError('Scenario details: enter a JSON object with field names and values, for example {"nation":"England","role":"receiver","activities":["receive_waste"]}.')
             if not contact_email or len(contact_email) > 254 or contact_email.count("@") != 1 or any(ch.isspace() for ch in contact_email):
@@ -526,7 +536,10 @@ def build_server():
             model, _executor = SHARED_EXECUTION_WORKFLOWS[workflow]
             validated_payload = model.model_validate(payload).model_dump(exclude_none=True)
         except Exception as exc:
-            if isinstance(exc, json.JSONDecodeError):
+            if isinstance(exc, QuestionFormError):
+                errors = exc.messages
+                error_fields = exc.fields
+            elif isinstance(exc, json.JSONDecodeError):
                 errors = [f"Scenario details: invalid JSON at line {exc.lineno}, column {exc.colno}. Use double quotes around text and remove trailing commas."]
             elif hasattr(exc, "errors"):
                 errors = []
@@ -555,7 +568,7 @@ def build_server():
                 errors = ["Scenario details: check your selected preflight and JSON fields, then try again."]
             if "application/json" in content_type:
                 return JSONResponse({"status": "invalid_request", "errors": errors}, status_code=422)
-            return HTMLResponse(_waste_report_form(values=form, errors=errors), status_code=422, headers={"Cache-Control": "no-store"})
+            return HTMLResponse(_waste_report_form(values=form, errors=errors, error_fields=error_fields), status_code=422, headers={"Cache-Control": "no-store"})
 
         pending_token = REPORT_CHECKOUTS.create(workflow=workflow, payload=validated_payload)
         source_channel = "direct"
