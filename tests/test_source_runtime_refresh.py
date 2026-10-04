@@ -40,7 +40,7 @@ def test_refresh_source_registry_publishes_fresh_runtime_state(monkeypatch):
 
 def test_waste_preflight_consumes_runtime_refresh_instead_of_stale_seed():
     clear_runtime_source_registry()
-    checked_at = "2026-09-30T14:15:00Z"
+    checked_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     fresh = _fresh_records(checked_at)
     set_runtime_source_registry(fresh)
 
