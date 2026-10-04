@@ -181,7 +181,9 @@ def test_source_registry_path_honours_explicit_override(monkeypatch, tmp_path):
     assert source_registry()[0]["id"] == "override-source"
 
 
-def test_cbd_registration_preflight_requires_carrier_own_waste_fact():
+def test_cbd_registration_preflight_requires_carrier_own_waste_fact(monkeypatch):
+    import uk_waste_rule_mcp.engine as engine
+    monkeypatch.setattr(engine, "_source_gate", lambda _ids: {"decision_usable": True})
     result = carrier_broker_dealer_registration_preflight({
         "nation": "England", "role": "carrier", "action": "new_registration"
     })

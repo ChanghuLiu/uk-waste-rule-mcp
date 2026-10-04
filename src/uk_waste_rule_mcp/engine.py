@@ -81,6 +81,10 @@ def _source_subset(ids: set[str]) -> list[dict[str, Any]]:
 
 def _source_gate(ids: set[str]) -> dict[str, Any]:
     selected = [source for source in source_registry() if source["id"] in ids]
+    present = {source["id"] for source in selected}
+    # A missing record cannot disappear from the gate and leave it READY.
+    selected.extend({"id": source_id, "last_status": "MISSING_SOURCE"}
+                    for source_id in sorted(ids - present))
     health = source_health(selected)
     return health
 
@@ -372,6 +376,14 @@ def carrier_broker_dealer_registration_preflight(scenario: dict[str, Any]) -> di
     else:
         status = "SCREENING_COMPLETE"
 
+    if not gate["decision_usable"]:
+        registration_required = None
+        price_route = "REVIEW_REQUIRED"
+        lifecycle = "REVIEW_REQUIRED"
+        findings = [item for item in findings if item["code"] not in {
+            "CBD-REG-001", "CBD-RENEW-001", "CBD-RENEW-002",
+        }]
+
     return {
         "product": PRODUCT,
         "schema_version": "0.2",
@@ -382,6 +394,7 @@ def carrier_broker_dealer_registration_preflight(scenario: dict[str, Any]) -> di
             "deterministic": True,
             "registration_required": registration_required,
             "role": role or None,
+            "requested_action": action,
             "action": lifecycle,
             "fee_route": price_route,
         },
@@ -485,6 +498,13 @@ def digital_waste_tracking_receipt_readiness(scenario: dict[str, Any]) -> dict[s
     else:
         status = "SCREENING_COMPLETE"
 
+    if not gate["decision_usable"]:
+        phase1_in_scope = None
+        requirement = "REVIEW_REQUIRED"
+        findings = [item for item in findings if item["code"] not in {
+            "DWT-SCOPE-001", "DWT-SCOPE-002",
+        }]
+
     return {
         "product": PRODUCT,
         "schema_version": "0.2",
@@ -495,9 +515,9 @@ def digital_waste_tracking_receipt_readiness(scenario: dict[str, Any]) -> dict[s
             "deterministic": True,
             "phase1_in_scope": phase1_in_scope,
             "requirement": requirement,
-            "mandatory_from": DWT_MANDATORY_ENGLAND.isoformat(),
+            "mandatory_from": DWT_MANDATORY_ENGLAND.isoformat() if gate["decision_usable"] else None,
             "as_of_date": as_of.isoformat(),
-            "reporting_timing": "Report each received load within 2 working days, starting the day after receipt, when the mandatory receiving-site rule applies.",
+            "reporting_timing": "Report each received load within 2 working days, starting the day after receipt, when the mandatory receiving-site rule applies." if gate["decision_usable"] else None,
         },
         "findings": findings,
         "source_health": gate,
