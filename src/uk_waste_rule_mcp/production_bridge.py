@@ -531,7 +531,7 @@ def build_server():
             contact_email = str(form.get("contact_email") or "").strip()
             if not isinstance(payload, dict):
                 raise ValueError('Scenario details: enter a JSON object with field names and values, for example {"nation":"England","role":"receiver","activities":["receive_waste"]}.')
-            if not contact_email or len(contact_email) > 254 or contact_email.count("@") != 1 or any(ch.isspace() for ch in contact_email):
+            if not contact_email or len(contact_email) > 254 or contact_email.count("@") != 1 or contact_email.startswith("@") or contact_email.endswith("@") or any(ch.isspace() for ch in contact_email):
                 raise ValueError("Checkout email: enter a valid email address, for example you@example.com.")
             model, _executor = SHARED_EXECUTION_WORKFLOWS[workflow]
             validated_payload = model.model_validate(payload).model_dump(exclude_none=True)
@@ -658,7 +658,7 @@ def build_server():
             return JSONResponse({"status":"invalid_request"}, status_code=422)
         if not checkout_id or len(checkout_id) > 128 or any(ch.isspace() for ch in checkout_id):
             return JSONResponse({"status":"invalid_request"}, status_code=422)
-        if len(contact_email) > 254 or contact_email.count("@") != 1 or any(ch.isspace() for ch in contact_email):
+        if len(contact_email) > 254 or contact_email.count("@") != 1 or contact_email.startswith("@") or contact_email.endswith("@") or any(ch.isspace() for ch in contact_email):
             return JSONResponse({"status":"invalid_request"}, status_code=422)
         try:
             accepted = await COMMERCIAL_CLIENT.start_report_recovery(checkout_id=checkout_id, contact_email=contact_email)
