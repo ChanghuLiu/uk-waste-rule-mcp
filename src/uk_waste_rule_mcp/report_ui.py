@@ -1,5 +1,6 @@
 """Readable purchase report pages; decision payloads remain unchanged."""
 from __future__ import annotations
+from .form_feedback import feedback_page, with_form_feedback, bind_form_values, error_summary
 
 import json
 from html import escape
@@ -47,6 +48,7 @@ def _label(value):
     return str(value).replace("_", " ").capitalize()
 
 
+@feedback_page
 def document(title, body, script=""):
     script_tag = "<script>" + script + "</script>" if script else ""
     return (

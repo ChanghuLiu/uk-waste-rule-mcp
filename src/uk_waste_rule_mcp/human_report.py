@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .form_feedback import feedback_page, with_form_feedback, bind_form_values, error_summary
 
 from html import escape
 from typing import Any, Mapping
@@ -96,12 +97,12 @@ def _select(name: str, label: str, values: tuple[str, ...], *, required: bool = 
     options += [f'<option value="{escape(v)}">{escape(v.replace("_", " ").title())}</option>' for v in values]
     return f'<label for="{escape(name)}">{escape(label)}</label><select id="{escape(name)}" name="{escape(name)}"{req}>' + "".join(options) + "</select>"
 
-def form_html(action: str, *, src: str = "regevidencehub", run_class: str = "") -> str:
+def form_html(action: str, *, src: str = "regevidencehub", run_class: str = "", values=None) -> str:
     activity_boxes = "".join(
         f'<label class="check"><input type="checkbox" name="activity_{escape(a)}" value="true"> {escape(a.replace("_", " ").title())}</label>'
         for a in ACTIVITIES
     )
-    return f'''<form method="post" action="{escape(action)}">
+    markup = f'''<form method="post" action="{escape(action)}" data-require-activity="true">
 <input type="hidden" name="src" value="{escape(src)}"><input type="hidden" name="run_class" value="{escape(run_class)}">
 <fieldset><legend>Waste operation facts</legend>
 <div class="field">{_select("role","Primary waste role",ROLES,required=True)}</div>
@@ -113,7 +114,9 @@ def form_html(action: str, *, src: str = "regevidencehub", run_class: str = "") 
 <label class="check"><input type="checkbox" name="facts_complete" value="true" required> I have supplied the material facts I currently know.</label>
 <button type="submit">Check readiness</button>
 </fieldset></form>'''
+    return bind_form_values(markup, values or {})
 
+@feedback_page
 def render_page(*, form: str, payload: Mapping[str, Any] | None = None, errors: list[str] | None = None, src: str = "regevidencehub", run_class: str = "") -> str:
     error_html = ""
     if errors:
@@ -134,6 +137,7 @@ def render_page(*, form: str, payload: Mapping[str, Any] | None = None, errors: 
 {error_html}{readiness}<h2>Start with structured facts</h2>{form}
 <p class="muted">Preflight information only; not Environment Agency approval, a permit/registration decision, or legal advice.</p></main></body></html>'''
 
+@feedback_page
 def render_paid_report(decision: Mapping[str, Any], *, entitlement_code: str | None) -> str:
     detail = escape(json.dumps(dict(decision), indent=2, sort_keys=True, default=str))
     code = escape(entitlement_code or "waste_compliance_report")
