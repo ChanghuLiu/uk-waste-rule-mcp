@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "uk-waste-rule-mcp": {
+      "type": "http",
+      "url": "https://waste.regevidencehub.com/mcp"
+    }
+  }
+}

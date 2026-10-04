@@ -1,6 +1,7 @@
 """Production HTTP/MCP surface for RegEvidenceHub Waste."""
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import secrets
@@ -19,10 +20,26 @@ from .engine import (
     permit_change_impact as impact,
     waste_preflight,
 )
-from .monitor import check_all_sources, source_health
+from .monitor import check_all_sources, refresh_source_registry, source_health
 from .case_state import DurableCaseStore
 from .commercial import CommercialPlatformClient, CommercialPlatformError, PendingWasteReportStore
 from .entitlement_token import verify_entitlement_token
+from .human_report import (
+    CANCEL_ROUTE as HUMAN_CANCEL_ROUTE,
+    CHECKOUT_ROUTE as HUMAN_CHECKOUT_ROUTE,
+    READINESS_ROUTE as HUMAN_READINESS_ROUTE,
+    ROUTE as HUMAN_REPORT_ROUTE,
+    SUCCESS_ROUTE as HUMAN_SUCCESS_ROUTE,
+    classification as human_classification,
+    form_html as human_form_html,
+    render_cancelled as render_human_cancelled,
+    render_checkout_error as render_human_checkout_error,
+    render_entitlement_pending as render_human_entitlement_pending,
+    render_page as render_human_page,
+    render_paid_report as render_human_paid_report,
+    source_bucket as human_source_bucket,
+    validate_form as validate_human_form,
+)
 from .sources import source_registry
 from .schemas import CarrierRegistrationScenario, DigitalTrackingScenario, PermitChangeScenario, WasteRuleScenario
 
@@ -102,7 +119,7 @@ TOOL_DESCRIPTIONS = {
     ),
     "waste_source_audit": (
         "FREE LIVE SOURCE-AUDIT tool. Select only when a fresh network check of monitored official sources "
-        "and fingerprint comparison is required. It does not accept new baselines or change reviewed evidence. "
+        "and fingerprint comparison is required. It persists only the latest observation state; it does not accept new baselines or change reviewed evidence. "
         "Do NOT use for a waste-route decision; use waste_rule_preflight after source health is established."
     ),
     "waste_source_registry": (
@@ -178,6 +195,7 @@ def service_info(x402: Any = None) -> dict[str, Any]:
         "payment_enforced": payment_enforced(),
         "payment_protocol": "x402-v2" if payment_enforced() else None,
         "prices": dict(PRICES),
+        "human_report": {"route": HUMAN_REPORT_ROUTE, "price": "£19.00", "entitlement_hours": 24},
         "fail_closed": True,
         "source_health": source_health(),
         "safety_boundary": "Preflight information only; not an Environment Agency permit, exemption, registration decision or legal advice.",
@@ -602,6 +620,163 @@ footer a{white-space:nowrap}
         checkout_id = escape(request.query_params.get("checkout_id", ""), quote=True)
         page = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>Recover Waste report — RegEvidenceHub</title><style>*{box-sizing:border-box}body{margin:0;background:#f3f6fb;color:#18324b;font:16px/1.55 system-ui,sans-serif}.wrap{max-width:680px;margin:8vh auto;padding:24px}.card{background:#fff;border:1px solid #dbe4ef;border-top:4px solid #2160e8;border-radius:16px;padding:clamp(22px,5vw,38px);box-shadow:0 12px 36px #17325012}.eyebrow{color:#185adb;font-size:.78rem;font-weight:750;letter-spacing:.1em}h1{font-size:clamp(1.7rem,4vw,2.2rem);line-height:1.15;margin:0 0 12px}.intro{color:#51677e;margin:0 0 24px}.field{display:block;margin:18px 0}.field span{display:block;font-weight:650;margin-bottom:7px}input{width:100%;min-height:48px;padding:11px 13px;border:1px solid #b8c8da;border-radius:9px;font:inherit}button{width:100%;min-height:50px;margin-top:8px;border:0;border-radius:9px;background:#2160e8;color:#fff;font:700 1rem system-ui,sans-serif;cursor:pointer}button:disabled{opacity:.65}#status{margin:20px 0 0;padding:13px 15px;border-radius:10px;background:#eef4ff;color:#244a77}#status[hidden]{display:none}#status[data-state=success]{background:#eaf8ef;color:#17633b}#status[data-state=error]{background:#fff0f0;color:#992c2c}.foot{font-size:.9rem;color:#64788d}</style></head><body><main class="wrap"><section class="card"><p class="eyebrow">REG EVIDENCE HUB · WASTE</p><h1>Recover your paid report</h1><p class="intro">Enter your order reference and checkout email. We’ll send a secure link if they match a paid report. No further payment is needed.</p><form id="form"><label class="field"><span>Order reference</span><input name="checkout_id" required maxlength="128" autocomplete="off" value="__ORDER_REF__"></label><label class="field"><span>Checkout email</span><input name="contact_email" type="email" autocomplete="email" maxlength="254" required></label><button type="submit">Send recovery link</button></form><p id="status" role="status" aria-live="polite" aria-atomic="true" hidden></p><p class="foot">For your security, we won’t reveal whether an order or email matched.</p></section></main><script>const f=document.getElementById('form'),b=f.querySelector('button'),s=document.getElementById('status');f.addEventListener('submit',async e=>{e.preventDefault();if(!f.reportValidity())return;b.disabled=true;b.textContent='Sending…';s.hidden=false;s.dataset.state='';s.textContent='Sending your request…';const c=new AbortController(),t=setTimeout(()=>c.abort(),10000);try{const r=await fetch('/api/v1/report-access/recovery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({checkout_id:f.elements.checkout_id.value.trim(),contact_email:f.elements.contact_email.value.trim()}),signal:c.signal});if(!r.ok)throw Error('request');s.dataset.state='success';s.innerHTML='<strong>Recovery request received</strong><br>If a paid report matches those details, a recovery link will be sent.<br><strong>Open your email and use the newest recovery link.</strong>'}catch(x){s.dataset.state='error';s.textContent=x.name==='AbortError'?'Request timed out. Check your email before trying again.':'Recovery is temporarily unavailable. Try again later.'}finally{clearTimeout(t);b.disabled=false;b.textContent='Send recovery link'}});</script></body></html>""".replace("__ORDER_REF__", checkout_id)
         return HTMLResponse(page, headers={"Cache-Control":"no-store", "Referrer-Policy":"no-referrer", "Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"})
+    async def _read_human_form(request) -> dict[str, str]:
+        from urllib.parse import parse_qs
+        body = (await request.body()).decode("utf-8", errors="replace")
+        parsed = parse_qs(body, keep_blank_values=True)
+        return {key: values[-1] if values else "" for key, values in parsed.items()}
+
+    def _commercial_source_channel(source: str) -> str:
+        allowed = {"openai","claude","grok","regevidencehub","organic","directory","direct"}
+        return source if source in allowed else "direct"
+
+    async def _safe_commercial_event(event_type: str, *, source: str, classification: str, owner_test: bool) -> None:
+        try:
+            await COMMERCIAL_CLIENT.record_event(
+                event_type=event_type,
+                source_channel=_commercial_source_channel(source),
+                external_classification=classification,
+                owner_test=owner_test,
+            )
+        except Exception:
+            return
+
+    def _human_principal(state_ref: str) -> str:
+        return f"waste_human_{state_ref}"
+
+    @server.custom_route(HUMAN_REPORT_ROUTE, methods=["GET"], include_in_schema=False)
+    async def human_report_page(request):
+        source = human_source_bucket(request)
+        classification, owner_test = human_classification(request, posted=False)
+        await _safe_commercial_event(
+            "discovery_observed", source=source, classification=classification, owner_test=owner_test,
+        )
+        return HTMLResponse(
+            render_human_page(
+                form=human_form_html(HUMAN_READINESS_ROUTE, src=source),
+                src=source,
+            ),
+            headers={"Cache-Control":"public, max-age=300"},
+        )
+
+    @server.custom_route(HUMAN_READINESS_ROUTE, methods=["POST"], include_in_schema=False)
+    async def human_report_readiness(request):
+        form = await _read_human_form(request)
+        source = human_source_bucket(request, form)
+        classification, owner_test = human_classification(request, form, posted=True)
+        payload, errors = validate_human_form(form)
+        run_class = classification if classification in {"owner_test","synthetic"} else ""
+        if errors or payload is None:
+            return HTMLResponse(
+                render_human_page(
+                    form=human_form_html(HUMAN_READINESS_ROUTE, src=source, run_class=run_class),
+                    errors=errors,
+                    src=source,
+                    run_class=run_class,
+                ),
+                status_code=422,
+            )
+        await _safe_commercial_event(
+            "free_execution", source=source, classification=classification, owner_test=owner_test,
+        )
+        return HTMLResponse(
+            render_human_page(
+                form=human_form_html(HUMAN_READINESS_ROUTE, src=source, run_class=run_class),
+                payload=payload,
+                src=source,
+                run_class=run_class,
+            )
+        )
+
+    @server.custom_route(HUMAN_CHECKOUT_ROUTE, methods=["POST"], include_in_schema=False)
+    async def human_report_checkout(request):
+        form = await _read_human_form(request)
+        source = human_source_bucket(request, form)
+        classification, owner_test = human_classification(request, form, posted=True)
+        payload, errors = validate_human_form(form)
+        if errors or payload is None:
+            return HTMLResponse(
+                render_human_page(
+                    form=human_form_html(HUMAN_READINESS_ROUTE, src=source),
+                    errors=errors,
+                    src=source,
+                ),
+                status_code=422,
+            )
+        row = DURABLE_CASES.create(
+            action=SHARED_EXECUTION_ACTION,
+            workflow="waste_rule_preflight",
+            payload=payload,
+            source_bucket=source,
+            classification=classification,
+            owner_test=owner_test,
+        )
+        principal_ref = _human_principal(row.state_ref)
+        human_origin = os.getenv("WASTE_HUMAN_ORIGIN", PUBLIC_ORIGIN).strip().rstrip("/") or PUBLIC_ORIGIN
+        success_url = f"{human_origin}{HUMAN_SUCCESS_ROUTE}?state_ref={row.state_ref}"
+        cancel_url = f"{human_origin}{HUMAN_CANCEL_ROUTE}"
+        await _safe_commercial_event(
+            "paid_intent", source=source, classification=classification, owner_test=owner_test,
+        )
+        try:
+            checkout = await COMMERCIAL_CLIENT.create_checkout(
+                principal_ref=principal_ref,
+                source_channel=_commercial_source_channel(source),
+                external_classification=classification,
+                owner_test=owner_test,
+                success_url=success_url,
+                cancel_url=cancel_url,
+                idempotency_key=f"waste-human-{row.state_ref}",
+            )
+        except Exception:
+            return HTMLResponse(render_human_checkout_error(), status_code=503)
+        await _safe_commercial_event(
+            "checkout_started", source=source, classification=classification, owner_test=owner_test,
+        )
+        return RedirectResponse(checkout.checkout_url, status_code=303)
+
+    @server.custom_route(HUMAN_CANCEL_ROUTE, methods=["GET"], include_in_schema=False)
+    async def human_report_cancelled(_request):
+        return HTMLResponse(render_human_cancelled())
+
+    @server.custom_route(HUMAN_SUCCESS_ROUTE, methods=["GET"], include_in_schema=False)
+    async def human_report_success(request):
+        state_ref = str(request.query_params.get("state_ref") or "")
+        row = DURABLE_CASES.get(state_ref)
+        if row is None or row.workflow != "waste_rule_preflight":
+            return HTMLResponse(render_human_entitlement_pending(), status_code=404)
+        principal_ref = _human_principal(state_ref)
+        entitlement: dict[str, Any] | None = None
+        for _ in range(5):
+            try:
+                entitlement = await COMMERCIAL_CLIENT.verify_entitlement(principal_ref=principal_ref)
+            except Exception:
+                entitlement = None
+            if entitlement and entitlement.get("active") is True:
+                break
+            await asyncio.sleep(1)
+        if not entitlement or entitlement.get("active") is not True:
+            return HTMLResponse(render_human_entitlement_pending(), status_code=403)
+        try:
+            decision = waste_preflight(dict(row.payload))
+        except Exception:
+            return HTMLResponse(render_human_checkout_error("The paid report could not be generated safely."), status_code=503)
+        await _safe_commercial_event(
+            "payment_succeeded", source=row.source_bucket, classification=row.classification, owner_test=row.owner_test,
+        )
+        await _safe_commercial_event(
+            "entitlement_activated", source=row.source_bucket, classification=row.classification, owner_test=row.owner_test,
+        )
+        await _safe_commercial_event(
+            "premium_fulfilled", source=row.source_bucket, classification=row.classification, owner_test=row.owner_test,
+        )
+        return HTMLResponse(
+            render_human_paid_report(
+                decision,
+                entitlement_code=str(entitlement.get("entitlement_code") or "") or None,
+            ),
+            headers={"Cache-Control":"no-store"},
+        )
 
     @server.custom_route("/api/v1/continuation-case", methods=["POST"], include_in_schema=False)
     async def continuation_case(request):
@@ -706,6 +881,8 @@ footer a{white-space:nowrap}
 <li><code>waste_permit_change_preflight</code> — $0.03 USDC</li></ul>
 <p>MCP: <code>{MCP_URL}</code></p><p>Public AI MCP: <code>{PUBLIC_ORIGIN}/ai/mcp</code></p>
 <p><a href="/waste-report">Buy a one-off verified report — £19</a> · <a href="/pricing">API pricing</a> · <a href="/llms.txt">llms.txt</a> · <a href="/.well-known/agent-card.json">agent card</a> · <a href="/metrics">metrics</a></p>
+<p><strong>Human/business report:</strong> <a href="{HUMAN_REPORT_ROUTE}">England Waste Compliance Preflight Report — £19.00</a> with 24-hour entitlement.</p>
+<p><a href="/pricing">pricing</a> · <a href="/llms.txt">llms.txt</a> · <a href="/.well-known/agent-card.json">agent card</a> · <a href="/metrics">metrics</a></p>
 <p>Informational preflight only; not Environment Agency approval or legal advice.</p></main></body></html>"""
         )
 
@@ -735,7 +912,7 @@ footer a{white-space:nowrap}
 
     @server.custom_route("/source-audit", methods=["GET"], include_in_schema=False)
     async def source_audit(_request):
-        checked=check_all_sources()
+        checked=refresh_source_registry()
         return JSONResponse({"health":source_health(checked),"checked_sources":checked},headers={"Cache-Control":"no-store"})
 
     @server.custom_route("/pricing", methods=["GET"], include_in_schema=False)
@@ -745,7 +922,8 @@ footer a{white-space:nowrap}
 <meta name="description" content="RegEvidenceHub Waste x402 pricing for England waste regulatory MCP decision tools."><meta name="robots" content="index,follow">
 <link rel="canonical" href="{PUBLIC_ORIGIN}/pricing"><title>Pricing — RegEvidenceHub Waste</title></head>
 <body><main style="font-family:system-ui;max-width:900px;margin:48px auto;padding:0 22px;line-height:1.55">
-<h1>RegEvidenceHub Waste pricing</h1><p>Machine-to-machine pricing for the commercial MCP endpoint <code>{MCP_URL}</code>.</p>
+<h1>RegEvidenceHub Waste pricing</h1><h2>People & businesses</h2><p><strong>England Waste Compliance Preflight Report — £19.00.</strong> Start with a free structured readiness check, then continue to Stripe checkout for the full evidence-linked waste-rule report. The paid entitlement lasts 24 hours.</p><p><a href="{HUMAN_REPORT_ROUTE}">Start the waste compliance report →</a></p>
+<h2>AI agents & APIs</h2><p>Machine-to-machine pricing for the commercial MCP endpoint <code>{MCP_URL}</code>.</p>
 <ul>{rows}</ul><p>Protocol: x402 v2 · Network: Base mainnet · Asset: USDC.</p>
 <p><a href="/.well-known/x402">x402 discovery metadata</a> · <a href="/.well-known/agent-card.json">agent card</a> · <a href="/llms.txt">llms.txt</a></p>
 </main></body></html>""")
@@ -761,7 +939,7 @@ footer a{white-space:nowrap}
 
     @server.custom_route("/sitemap.xml", methods=["GET"], include_in_schema=False)
     async def sitemap(_request):
-        urls=["/","/waste-report","/pricing","/privacy","/terms","/support","/llms.txt","/.well-known/agent-card.json"]
+        urls=["/","/waste-report",HUMAN_REPORT_ROUTE,"/pricing","/privacy","/terms","/support","/llms.txt","/.well-known/agent-card.json"]
         body='<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(f"<url><loc>{PUBLIC_ORIGIN}{p}</loc></url>" for p in urls) + "</urlset>"
         return PlainTextResponse(body,media_type="application/xml")
 
@@ -773,6 +951,7 @@ footer a{white-space:nowrap}
             "Use for waste carrier/broker/dealer registration, Digital Waste Tracking receiving-site readiness, waste permit/exemption routing and permit-change impact.\n"
             "Free: waste_service_info, waste_rule_catalog, waste_source_status, waste_source_audit, waste_source_registry.\n"
             "Paid: waste_rule_preflight $0.02 USDC; waste_carrier_broker_dealer_preflight $0.02 USDC; waste_digital_tracking_readiness $0.03 USDC; waste_permit_change_preflight $0.03 USDC.\n"
+            f"Human/business report: England Waste Compliance Preflight Report — £19.00, 24-hour entitlement: {PUBLIC_ORIGIN}{HUMAN_REPORT_ROUTE}\n"
             f"x402 discovery: {PUBLIC_ORIGIN}/.well-known/x402\nAgent card: {PUBLIC_ORIGIN}/.well-known/agent-card.json\n"
             "Paid commercial decisions use x402 v2 on Base mainnet. Fail closed on stale, changed, unavailable, unreviewed or incomplete official evidence. Not regulator approval or legal advice.\n"
         )
@@ -839,7 +1018,7 @@ footer a{white-space:nowrap}
 
     @server.tool(description=TOOL_DESCRIPTIONS["waste_source_audit"], annotations=annotations("waste_source_audit"))
     def waste_source_audit(ctx: Context) -> dict[str, Any]:
-        return _record("waste_source_audit", lambda: (lambda checked: source_health(checked) | {"checked_sources":checked})(check_all_sources()), meta=_meta(ctx))
+        return _record("waste_source_audit", lambda: (lambda checked: source_health(checked) | {"checked_sources":checked})(refresh_source_registry()), meta=_meta(ctx))
 
     @server.tool(description=TOOL_DESCRIPTIONS["waste_source_registry"], annotations=annotations("waste_source_registry"))
     def waste_source_registry(ctx: Context) -> list[dict[str, Any]]:
@@ -906,12 +1085,34 @@ def main() -> None:
     public_ai_server=build_public_ai_server()
     public_ai_app=public_ai_server.streamable_http_app(host=host,json_response=True,stateless_http=True)
 
+    refresh_interval=max(300.0,float(os.getenv("WASTE_SOURCE_REFRESH_INTERVAL_SECONDS","21600")))
+
+    async def refresh_loop():
+        while True:
+            await asyncio.sleep(refresh_interval)
+            try:
+                await asyncio.to_thread(refresh_source_registry)
+            except Exception as exc:
+                print(f"WASTE_SOURCE_REFRESH_ERROR {exc!r}",flush=True)
+
     @asynccontextmanager
     async def lifespan(_app):
         async with AsyncExitStack() as stack:
             await stack.enter_async_context(commercial_server.session_manager.run())
             await stack.enter_async_context(public_ai_server.session_manager.run())
-            yield
+            try:
+                await asyncio.to_thread(refresh_source_registry)
+            except Exception as exc:
+                print(f"WASTE_SOURCE_STARTUP_REFRESH_ERROR {exc!r}",flush=True)
+            refresh_task=asyncio.create_task(refresh_loop())
+            try:
+                yield
+            finally:
+                refresh_task.cancel()
+                try:
+                    await refresh_task
+                except asyncio.CancelledError:
+                    pass
 
     app=Starlette(routes=[
         Route("/waste-rule-preflight",endpoint=plugin_product_page,methods=["GET"]),

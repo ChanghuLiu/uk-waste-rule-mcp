@@ -6,7 +6,7 @@ from typing import Any
 
 from . import __version__
 from .engine import PRODUCT, classify_waste_route, list_waste_rules, permit_change_impact, waste_preflight
-from .monitor import check_all_sources, source_health, write_registry
+from .monitor import refresh_source_registry, source_health, write_registry
 from .sources import source_registry
 
 try:
@@ -58,7 +58,7 @@ if MCPServer is not None:
     def check_waste_sources() -> dict[str, Any]:
         """Fetch monitored official sources and return current fingerprint comparisons."""
 
-        checked = check_all_sources()
+        checked = refresh_source_registry()
         return source_health(checked) | {"checked_sources": checked}
 
     @mcp.tool()

@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Any
 
 
+_RUNTIME_SOURCES: list[dict[str, Any]] | None = None
+
+
 SOURCES: list[dict[str, Any]] = [
     {
         "id": "govuk-cbd-registration",
@@ -105,8 +108,25 @@ def source_registry_path() -> Path:
     return candidates[-1]
 
 
+def set_runtime_source_registry(sources: list[dict[str, Any]]) -> None:
+    """Publish the latest observed source state for this running process."""
+
+    global _RUNTIME_SOURCES
+    _RUNTIME_SOURCES = [dict(source) for source in sources]
+
+
+def clear_runtime_source_registry() -> None:
+    """Clear process-local monitoring state; intended for tests and clean shutdowns."""
+
+    global _RUNTIME_SOURCES
+    _RUNTIME_SOURCES = None
+
+
 def source_registry() -> list[dict[str, Any]]:
-    """Return the checked-in registry, including monitoring state when available."""
+    """Return runtime observations when available, otherwise durable reviewed state."""
+
+    if _RUNTIME_SOURCES is not None:
+        return [dict(source) for source in _RUNTIME_SOURCES]
 
     registry_path = source_registry_path()
     try:
