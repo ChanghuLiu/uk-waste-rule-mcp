@@ -128,7 +128,7 @@ def render_page(*, form: str, payload: Mapping[str, Any] | None = None, errors: 
 <form method="post" action="{CHECKOUT_ROUTE}">{hidden_fields(payload,src=src,run_class=run_class)}<button type="submit">Get England Waste Compliance Preflight Report — {HUMAN_REPORT_PRICE}</button></form>
 </section>'''
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>England Waste Compliance Preflight Report</title>
-<style>body{{font-family:system-ui,sans-serif;max-width:960px;margin:0 auto;padding:32px 20px;line-height:1.55;color:#17202a}}h1{{line-height:1.15}}fieldset{{border:1px solid #ccd6dd;border-radius:8px;padding:18px}}legend,.label,label{{font-weight:650}}.field{{display:grid;grid-template-columns:minmax(240px,1fr) minmax(280px,1fr);gap:14px;align-items:start;border-top:1px solid #edf0f2;padding:10px 0}}select,input{{font:inherit;padding:8px;border:1px solid #9aa8b2;border-radius:5px;width:100%;box-sizing:border-box}}input[type=checkbox]{{width:auto}}.check{{display:block;font-weight:400;margin:6px 0}}button{{background:#155eef;color:#fff;border:0;border-radius:5px;padding:10px 16px;font:inherit;font-weight:700;cursor:pointer;margin-top:14px}}.result,.intro{{background:#f5f8fa;border-left:4px solid #155eef;padding:14px 18px;margin:22px 0}}.errors{{background:#fff1f0;border-left:4px solid #c00;padding:10px 18px}}.muted{{color:#53636f}}@media(max-width:700px){{.field{{grid-template-columns:1fr}}}}</style></head><body><main>
+<style>*{{box-sizing:border-box}}body{{margin:0;background:#f3f6fb;color:#18324b;font:16px/1.65 system-ui,-apple-system,sans-serif}}main{{max-width:960px;margin:0 auto;padding:clamp(24px,5vw,48px) 24px}}h1{{font-size:clamp(1.8rem,5vw,2.6rem);line-height:1.2;letter-spacing:-.035em}}h2{{line-height:1.3}}fieldset{{background:#fff;border:1px solid #dce5ef;border-radius:14px;padding:22px 24px;margin:22px 0;box-shadow:0 6px 22px #193a580c}}legend,.label,label{{font-weight:650}}.field{{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:center;border-top:1px solid #edf1f5;padding:14px 0;min-width:0}}.field>*{{min-width:0}}select,input{{font:inherit;color:inherit;padding:11px 13px;border:1px solid #aabacf;border-radius:8px;width:100%;min-height:48px;background:#fff}}input[type=checkbox]{{width:18px;height:18px;min-height:18px;vertical-align:middle;accent-color:#155eef}}.check{{display:block;font-weight:400;line-height:1.5;margin:10px 0}}button{{background:#155eef;color:#fff;border:0;border-radius:9px;padding:12px 18px;min-height:48px;font:inherit;font-weight:700;cursor:pointer;margin-top:14px}}button:hover{{background:#124ac0}}:focus-visible{{outline:3px solid #94b9ff;outline-offset:3px}}.result,.intro{{background:#fff;border:1px solid #dce5ef;border-left:4px solid #155eef;border-radius:12px;padding:18px 22px;margin:22px 0;box-shadow:0 4px 18px #193a5808}}.errors{{background:#fff5f4;border:1px solid #f0d2d0;border-left:4px solid #bc3030;border-radius:12px;padding:14px 18px}}.muted{{color:#536b82}}@media(max-width:700px){{main{{padding:24px 16px 36px}}.field{{grid-template-columns:1fr;gap:8px;align-items:start}}fieldset{{padding:18px}}button{{width:100%}}.result,.intro,.errors{{padding:16px}}}}</style></head><body><main>
 <p class="muted">RegEvidenceHub Waste · England</p><h1>England Waste Compliance Preflight Report</h1>
 <section class="intro"><p><strong>Free readiness:</strong> confirm the supported role and waste activities before payment.</p><p><strong>Paid report — {HUMAN_REPORT_PRICE}:</strong> the full deterministic evidence-linked waste-rule preflight for the supplied case, including route, missing facts, official-source evidence and fail-closed review status. Access lasts 24 hours.</p><p>Stripe handles payment. RegEvidenceHub Waste does not collect card details.</p></section>
 {error_html}{readiness}<h2>Start with structured facts</h2>{form}
@@ -137,13 +137,63 @@ def render_page(*, form: str, payload: Mapping[str, Any] | None = None, errors: 
 def render_paid_report(decision: Mapping[str, Any], *, entitlement_code: str | None) -> str:
     detail = escape(json.dumps(dict(decision), indent=2, sort_keys=True, default=str))
     code = escape(entitlement_code or "waste_compliance_report")
-    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>England Waste Compliance Preflight Report</title><style>body{{font-family:system-ui,sans-serif;max-width:960px;margin:0 auto;padding:32px 20px;line-height:1.55;color:#17202a}}pre{{white-space:pre-wrap;overflow:auto;background:#f5f5f5;padding:16px;border-radius:8px}}.ok{{background:#f5f8fa;border-left:4px solid #155eef;padding:14px 18px}}</style></head><body><main><h1>England Waste Compliance Preflight Report</h1><section class="ok"><p><strong>Entitlement verified:</strong> {code}</p><p>This report preserves deterministic missing-information, evidence-freshness and review-required states.</p></section><h2>Decision</h2><pre>{detail}</pre><p>Preflight information only; not regulator approval or legal advice.</p></main></body></html>'''
+    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>England Waste Compliance Preflight Report</title><style>
+*{{box-sizing:border-box}}body{{margin:0;background:#f3f6fb;color:#18324b;font:16px/1.65 system-ui,-apple-system,sans-serif}}
+main{{max-width:960px;margin:0 auto;padding:clamp(24px,6vw,56px) 24px}}
+.brand{{margin:0 0 20px;color:#215cdb;font-size:.8rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}}
+h1{{margin:0 0 22px;font-size:clamp(1.8rem,5vw,2.6rem);line-height:1.2;letter-spacing:-.035em}}
+h2{{margin:0 0 14px;font-size:1.25rem}}
+.card{{margin:20px 0;padding:clamp(20px,4vw,30px);background:#fff;border:1px solid #dce5ef;border-radius:16px;box-shadow:0 6px 22px #193a580c;min-width:0}}
+.ok{{border-top:4px solid #16804a;background:#f0faf4}}.ok p:last-child{{margin-bottom:0}}
+pre{{margin:0;max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;overflow:auto;background:#f5f8fc;border:1px solid #e3eaf2;border-radius:10px;padding:18px;font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace}}
+.muted{{color:#536b82}}a{{color:#175acb;text-underline-offset:3px}}:focus-visible{{outline:3px solid #83b4ff;outline-offset:3px}}
+footer{{margin-top:26px;color:#536b82;font-size:.9rem}}
+@media(max-width:600px){{main{{padding:24px 16px 36px}}.card{{padding:20px}}pre{{padding:14px;font-size:12px}}}}
+</style></head><body><main><p class="brand">RegEvidenceHub Waste · England</p><h1>England Waste Compliance Preflight Report</h1>
+<section class="card ok"><p><strong>Paid access verified</strong></p><p>Order reference: <code>{code}</code></p><p>This report preserves deterministic missing-information, evidence-freshness and review-required states.</p></section>
+<section class="card"><h2>Decision details</h2><pre>{detail}</pre></section>
+<footer>Preflight information only; not Environment Agency approval, a permit or registration decision, or legal advice.</footer></main></body></html>'''
 
-def render_checkout_error(message: str = "Checkout is temporarily unavailable.") -> str:
-    return f'<!doctype html><html><body><main><h1>Checkout unavailable</h1><p>{escape(message)}</p><p>No payment was taken.</p></main></body></html>'
+STATUS_STYLE = """
+*{box-sizing:border-box}body{margin:0;background:#f3f6fb;color:#18324b;font:16px/1.65 system-ui,-apple-system,sans-serif}
+main{max-width:720px;margin:0 auto;padding:clamp(24px,7vw,64px) 24px}
+.brand{margin:0 0 20px;color:#215cdb;font-size:.8rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.card{background:#fff;border:1px solid #dce5ef;border-top:4px solid #215cdb;border-radius:16px;padding:clamp(22px,5vw,38px);box-shadow:0 10px 32px #193a5810}
+h1{margin:0 0 14px;font-size:clamp(1.8rem,5vw,2.5rem);line-height:1.2;letter-spacing:-.035em}
+p{margin:0 0 16px}.message{color:#536b82}.actions{margin:24px 0 0}
+a{color:#175acb;text-underline-offset:3px}.button{display:inline-flex;min-height:48px;align-items:center;justify-content:center;padding:11px 18px;border-radius:9px;background:#2160df;color:#fff;text-decoration:none;font-weight:700}
+.button:hover{background:#174bb6}.button:focus-visible{outline:3px solid #83b4ff;outline-offset:3px}
+.foot{margin-top:24px;color:#536b82;font-size:.9rem}
+@media(max-width:600px){main{padding:24px 16px 36px}.button{width:100%;text-align:center}}
+"""
+
+def _render_status_page(title: str, message: str, *, support: bool = False) -> str:
+    support_link = ' · <a href="/support">Contact support</a>' if support else ""
+    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>{escape(title)}</title><style>{STATUS_STYLE}</style></head><body><main>
+<p class="brand">RegEvidenceHub Waste · England</p><section class="card"><h1>{escape(title)}</h1><p class="message">{escape(message)}</p><nav class="actions" aria-label="Next steps"><a class="button" href="{ROUTE}">Return to the report form</a></nav></section>
+<p class="foot">Preflight information only; not regulator approval or legal advice{support_link}.</p></main></body></html>'''
+
+def render_checkout_error(message: str | None = None) -> str:
+    if message:
+        return _render_status_page(
+            "Report temporarily unavailable",
+            "We could not safely generate the report. Your payment may already have completed. Do not purchase again; contact support for help.",
+            support=True,
+        )
+    return _render_status_page(
+        "Checkout unavailable",
+        "Checkout could not be started. No payment was taken. Please try again later.",
+    )
 
 def render_cancelled() -> str:
-    return '<!doctype html><html><body><main><h1>Checkout cancelled</h1><p>No payment was taken and no paid report was generated.</p></main></body></html>'
+    return _render_status_page(
+        "Checkout cancelled",
+        "No payment was taken and no paid report was generated. You can return to the form whenever you are ready.",
+    )
 
 def render_entitlement_pending() -> str:
-    return '<!doctype html><html><body><main><h1>Payment confirmation pending</h1><p>Stripe has returned you to RegEvidenceHub, but the paid entitlement is not active yet. Refresh this page in a few seconds.</p></main></body></html>'
+    return _render_status_page(
+        "Payment confirmation pending",
+        "Your payment has not been confirmed yet, so no paid report is available. Refresh this page in a few seconds. If the issue continues, do not purchase again; contact support.",
+        support=True,
+    )
