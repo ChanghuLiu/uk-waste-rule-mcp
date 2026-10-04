@@ -532,7 +532,22 @@ def build_server():
                 errors = []
                 for issue in exc.errors():
                     field = ".".join(str(part) for part in issue.get("loc", ())) or "scenario"
-                    action = "add this required field" if issue.get("type") == "missing" else "check the value and type against your selected preflight schema"
+                    kind = issue.get("type", "")
+                    expected = (issue.get("ctx") or {}).get("expected")
+                    if kind == "missing":
+                        action = "add this required field"
+                    elif expected and kind in {"enum", "literal_error"}:
+                        action = "choose " + str(expected)
+                    elif kind.startswith("bool"):
+                        action = "use true or false without quotation marks"
+                    elif kind.startswith("int"):
+                        action = "use a whole number"
+                    elif kind.startswith("list"):
+                        action = 'use a JSON list, for example ["receive_waste"]'
+                    elif kind.startswith("string"):
+                        action = "use text in double quotation marks"
+                    else:
+                        action = "check the value and type against your selected preflight schema"
                     errors.append(f"Scenario details — {field}: {action}.")
             elif isinstance(exc, ValueError):
                 errors = [str(exc)]

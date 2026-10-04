@@ -120,7 +120,7 @@ def form_html(action: str, *, src: str = "regevidencehub", run_class: str = "", 
 def render_page(*, form: str, payload: Mapping[str, Any] | None = None, errors: list[str] | None = None, src: str = "regevidencehub", run_class: str = "") -> str:
     error_html = ""
     if errors:
-        error_html = '<section class="errors"><h2>Correct these inputs</h2><ul>' + "".join(f"<li>{escape(e)}</li>" for e in errors) + "</ul></section>"
+        error_html = '<section class="errors"><h2>Correct these inputs</h2><ul>' + "".join('<li data-field="' + ("activity_produce_controlled_waste" if "waste activity" in e else "facts_complete" if "Confirm" in e else "") + '">' + escape(e) + '</li>' for e in errors) + "</ul></section>"
     readiness = ""
     if payload is not None:
         readiness = f'''<section class="result"><h2>Free readiness result</h2>
