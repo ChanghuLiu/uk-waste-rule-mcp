@@ -207,7 +207,7 @@ def _public_x402_document(gate: Any = None) -> dict[str, Any]:
         "scheme": "exact",
         "asset": BASE_USDC,
         "assetSymbol": "USDC",
-        "facilitator": os.getenv("WASTE_X402_FACILITATOR_URL", "https://facilitator.payai.network"),
+        "facilitator": ("https://api.cdp.coinbase.com/platform/v2/x402" if os.getenv("WASTE_MCP_X402_FACILITATOR", "payai").strip().lower() == "cdp" else os.getenv("WASTE_X402_FACILITATOR_URL", "https://facilitator.payai.network")),
         "tags": ["waste","england","permit","carrier","compliance"],
         "freeTools": ["waste_service_info","waste_rule_catalog","waste_source_status","waste_source_audit","waste_source_registry"],
         "paidTools": [{"name": name, "priceUSDC": price.lstrip("$")} for name, price in PRICES.items()],
