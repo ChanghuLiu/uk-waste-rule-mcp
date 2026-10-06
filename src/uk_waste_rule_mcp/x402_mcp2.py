@@ -11,6 +11,35 @@ DEFAULT_PUBLIC_MCP_URL = "https://waste.regevidencehub.com/mcp"
 BAZAAR_SERVICE_NAME = "RegEvidenceHub Waste"
 BAZAAR_TAGS = ["waste","england","permit","carrier","compliance"]
 BASE_MAINNET = "eip155:8453"
+CDP_FACILITATOR_URL = "https://api.cdp.coinbase.com/platform/v2/x402"
+
+
+def mcp_facilitator_mode() -> str:
+    mode = os.getenv("WASTE_MCP_X402_FACILITATOR", "payai").strip().lower() or "payai"
+    if mode not in {"payai", "url", "cdp"}:
+        raise RuntimeError("WASTE_MCP_X402_FACILITATOR must be one of: payai, url, cdp")
+    return mode
+
+
+def public_mcp_facilitator_url() -> str:
+    if mcp_facilitator_mode() == "cdp":
+        return CDP_FACILITATOR_URL
+    return os.getenv("WASTE_X402_FACILITATOR_URL", "https://facilitator.payai.network").strip() or "https://facilitator.payai.network"
+
+
+def _mcp_facilitator_client(mode: str, url: str):
+    from x402.http import FacilitatorConfig, HTTPFacilitatorClientSync
+    if mode == "cdp":
+        if not os.getenv("CDP_API_KEY_ID", "").strip() or not os.getenv("CDP_API_KEY_SECRET", "").strip():
+            raise RuntimeError("CDP_API_KEY_ID and CDP_API_KEY_SECRET are required when WASTE_MCP_X402_FACILITATOR=cdp")
+        try:
+            from cdp.x402 import create_facilitator_config
+        except ImportError as exc:
+            raise RuntimeError("Waste MCP x402 support requires cdp-sdk") from exc
+        return HTTPFacilitatorClientSync(create_facilitator_config())
+    if not url:
+        raise RuntimeError("WASTE_X402_FACILITATOR_URL is required when payment enforcement is enabled")
+    return HTTPFacilitatorClientSync(FacilitatorConfig(url=url))
 
 @dataclass(frozen=True)
 class PaidToolSpec:
@@ -31,7 +60,8 @@ class MCP2X402Gate:
     def __init__(self) -> None:
         self.network = os.getenv("WASTE_X402_NETWORK", BASE_MAINNET).strip() or BASE_MAINNET
         self.pay_to = os.getenv("WASTE_X402_PAY_TO", "").strip()
-        self.facilitator_url = os.getenv("WASTE_X402_FACILITATOR_URL", "").strip()
+        self.facilitator_mode = mcp_facilitator_mode()
+        self.facilitator_url = os.getenv("WASTE_X402_FACILITATOR_URL", "https://facilitator.payai.network").strip()
         self.public_mcp_url = os.getenv("WASTE_PUBLIC_MCP_URL", DEFAULT_PUBLIC_MCP_URL).strip()
         self.mode = _payment_mode()
         self.resource_server = None
@@ -41,13 +71,10 @@ class MCP2X402Gate:
             raise RuntimeError("WASTE_PUBLIC_MCP_URL must be an absolute https:// URL")
         if self.mode == "maintenance":
             return
-        if not self.facilitator_url:
-            raise RuntimeError("WASTE_X402_FACILITATOR_URL is required when payment enforcement is enabled")
         from x402 import x402ResourceServerSync
-        from x402.http import FacilitatorConfig, HTTPFacilitatorClientSync
         from x402.mechanisms.evm.exact import ExactEvmServerScheme
         from x402.extensions.bazaar import bazaar_resource_server_extension
-        facilitator = HTTPFacilitatorClientSync(FacilitatorConfig(url=self.facilitator_url))
+        facilitator = _mcp_facilitator_client(self.facilitator_mode, self.facilitator_url)
         self.resource_server = x402ResourceServerSync(facilitator)
         self.resource_server.register(self.network, ExactEvmServerScheme())
         self.resource_server.register_extension(bazaar_resource_server_extension)
