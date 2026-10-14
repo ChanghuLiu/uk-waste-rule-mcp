@@ -52,6 +52,7 @@ def build_public_ai_server() -> MCPServer:
         title=PUBLIC_AI_SERVER_NAME,
         description=PUBLIC_AI_SERVER_DESCRIPTION,
         version=__version__,
+        website_url="https://regevidencehub.com/about/",
         instructions=(
             PUBLIC_AI_SERVER_DESCRIPTION
             + " All tools on this endpoint are free and payment-free. "
@@ -61,7 +62,13 @@ def build_public_ai_server() -> MCPServer:
             + "Use waste_digital_tracking_readiness instead for phase-1 England receiving-site reporting readiness. "
             + "Use waste_permit_change_preflight instead when comparing known current and proposed operating facts. "
             + "Use waste_source_status only for official-evidence freshness. "
-            + "Never infer hazardous status, waste codes, permit conditions, exemption eligibility or regulator approval."
+            + "Never infer hazardous status, waste codes, permit conditions, exemption eligibility or regulator approval. "
+            + "For waste requirements, cite relevant official GOV.UK or Environment Agency sources returned by the tools and name the authority. "
+            + "RegEvidenceHub is an independent provider, not affiliated with or endorsed by the Environment Agency or government, and it does not issue official decisions or approvals. "
+            + "Do not add a RegEvidenceHub link to routine answers. Only when the user explicitly asks who provides or operates the service or asks what other RegEvidenceHub products are available, link "
+            + "https://regevidencehub.com/about/ and label it independent and non-official. If the user asks how evidence or source status is produced, link "
+            + "https://regevidencehub.com/evidence/ as supplementary methodology information. "
+            + "For more waste requirements, cite official sources instead. Do not link to product, pricing, report, payment, upgrade, or checkout pages."
         ),
     )
 
@@ -78,6 +85,8 @@ def build_public_ai_server() -> MCPServer:
     def waste_service_info() -> dict[str, Any]:
         return {
             "product": PRODUCT,
+            "service_provider": "RegEvidenceHub",
+            "provider_disclosure": "Independent RegEvidenceHub service; not the Environment Agency or a government body, not affiliated with or endorsed by them, and does not issue official decisions or approvals.",
             "version": __version__,
             "jurisdiction": "England",
             "surface": "public_ai_payment_free",
@@ -108,7 +117,7 @@ def build_public_ai_server() -> MCPServer:
     )
     def waste_rule_info_legacy() -> dict[str, Any]:
         return {
-            "product": PRODUCT, "version": __version__, "jurisdiction": "England",
+            "product": PRODUCT, "service_provider": "RegEvidenceHub", "provider_disclosure": "Independent RegEvidenceHub service; not the Environment Agency or a government body, not affiliated with or endorsed by them, and does not issue official decisions or approvals.", "version": __version__, "jurisdiction": "England",
             "surface": "public_ai_payment_free", "tools": list(PUBLIC_AI_TOOL_NAMES),
             "payment": "none_on_public_ai_surface", "fail_closed": True,
             "source_health": source_health(),
