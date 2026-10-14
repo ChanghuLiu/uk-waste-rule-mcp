@@ -5,6 +5,6 @@
   "description": "RegEvidenceHub Waste: England waste registration, DWT readiness and permit-change preflight.",
   "version": "0.4.1",
   "repository": {"url":"https://github.com/ChanghuLiu/uk-waste-rule-mcp","source":"github","id":"1381814950"},
-  "websiteUrl": "https://waste.regevidencehub.com/waste-rule-preflight",
+  "websiteUrl": "https://regevidencehub.com/about/",
   "remotes": [{"type":"streamable-http","url":"https://waste.regevidencehub.com/ai/mcp"}]
 }

@@ -27,6 +27,19 @@ def test_public_ai_mcp_is_payment_free_and_read_only(monkeypatch):
     )
 
     with TestClient(app) as client:
+        initialize = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 0,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-11-25",
+                    "capabilities": {},
+                    "clientInfo": {"name": "disclosure-test", "version": "1"},
+                },
+            },
+        )
         listing = client.post(
             "/mcp",
             json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
@@ -42,6 +55,14 @@ def test_public_ai_mcp_is_payment_free_and_read_only(monkeypatch):
         )
 
     assert listing.status_code == 200
+    assert initialize.status_code == 200
+    init_result = initialize.json()["result"]
+    assert init_result["serverInfo"]["websiteUrl"] == "https://regevidencehub.com/about/"
+    instructions = init_result["instructions"].lower()
+    assert "do not add a regevidencehub link to routine answers" in instructions
+    assert "only when the user explicitly asks who provides or operates the service or asks what other regevidencehub products are available" in instructions
+    assert "https://regevidencehub.com/about/" in instructions
+    assert "https://regevidencehub.com/evidence/" in instructions
     tools = listing.json()["result"]["tools"]
     assert [tool["name"] for tool in tools if tool["name"] in public_ai_server.PUBLIC_AI_TOOL_NAMES] == list(public_ai_server.PUBLIC_AI_TOOL_NAMES)
     assert {"waste_rule_info", "list_waste_rules"}.issubset({tool["name"] for tool in tools})
@@ -60,9 +81,14 @@ def test_public_ai_mcp_is_payment_free_and_read_only(monkeypatch):
 
     assert info.status_code == 200
     assert "none_on_public_ai_surface" in info.text
+    content = info.json()["result"]["structuredContent"]
+    assert content["service_provider"] == "RegEvidenceHub"
+    assert "independent" in content["provider_disclosure"].lower()
+    assert "not the environment agency" in content["provider_disclosure"].lower()
     assert "x402" not in info.text.lower()
     assert "stripe" not in info.text.lower()
     assert "checkout" not in info.text.lower()
+    assert "https://regevidencehub.com/evidence/" not in info.text
 
 
 def test_public_ai_mount_aliases_are_stable():
