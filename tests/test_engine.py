@@ -217,6 +217,15 @@ def test_dwt_permitted_receiving_site_is_mandatory_from_october_2026(monkeypatch
     assert result["decision"]["phase1_in_scope"] is True
     assert result["decision"]["requirement"] == "MANDATORY"
     assert result["decision"]["status"] == "SCREENING_COMPLETE"
+    assert result["service_charge"] == {
+        "amount_gbp": 26,
+        "period": "annual",
+        "applies_per": "organisation registered for the Report receipt of waste service",
+        "covers": "all waste-receiving sites operated by that organisation",
+        "first_payment_due": "2027-01-31",
+        "later_registration_note": "A later registration still incurs the full annual charge.",
+        "evidence_ids": ["govuk-report-receipt-of-waste"],
+    }
 
 
 def test_dwt_exemption_is_not_claimed_as_phase1_mandatory(monkeypatch):
