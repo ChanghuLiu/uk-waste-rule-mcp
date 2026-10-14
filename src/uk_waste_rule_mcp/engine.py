@@ -503,12 +503,22 @@ def digital_waste_tracking_receipt_readiness(scenario: dict[str, Any]) -> dict[s
             "as_of_date": as_of.isoformat(),
             "reporting_timing": "Report each received load within 2 working days, starting the day after receipt, when the mandatory receiving-site rule applies.",
         },
+        "service_charge": {
+            "amount_gbp": 26,
+            "period": "annual",
+            "applies_per": "organisation registered for the Report receipt of waste service",
+            "covers": "all waste-receiving sites operated by that organisation",
+            "first_payment_due": "2027-01-31",
+            "later_registration_note": "A later registration still incurs the full annual charge.",
+            "evidence_ids": ["govuk-report-receipt-of-waste"],
+        },
         "findings": findings,
         "source_health": gate,
         "evidence": _source_subset(source_ids),
         "next_actions": [
             "Confirm the receiving-site authorisation and whether controlled waste is received.",
             "Prepare either the receipt-of-waste API or the supported spreadsheet route before the mandatory date if the site is in scope.",
+            "Budget the £26 annual service charge for each organisation registered; it covers that organisation's receiving sites.",
             "Continue monitoring later Digital Waste Tracking phases for exemptions and collectors.",
         ],
         "limitations": [
