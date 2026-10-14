@@ -43,7 +43,12 @@ ACTIVITIES: dict[str, dict[str, Any]] = {
     "receive_waste": {
         "label": "Receive waste at a site",
         "route": "PERMIT_OR_EXEMPTION_AND_DIGITAL_TRACKING_REVIEW",
-        "source_ids": ["govuk-environmental-permits", "govuk-waste-exemptions", "govuk-digital-waste-tracking-service"],
+        "source_ids": [
+            "govuk-environmental-permits",
+            "govuk-waste-exemptions",
+            "govuk-digital-waste-tracking-service",
+            "govuk-report-receipt-of-waste",
+        ],
     },
     "store_waste": {
         "label": "Store waste",
@@ -229,7 +234,6 @@ def waste_preflight(scenario: dict[str, Any]) -> dict[str, Any]:
         if role in {"receiver", "operator"} and scenario.get("authorisation_status") in (None, ""):
             findings.append(_finding("AUTH-001", "blocking", "missing", "State whether the site currently relies on a permit, exemption, licence or no authorisation; the route is not inferred.", ["govuk-environmental-permits", "govuk-waste-exemptions"]))
         if "receive_waste" in activities:
-            source_ids.add("govuk-digital-waste-tracking-service")
             findings.append(_finding("DWT-001", "warning", "review_required", "Receiving-site digital tracking scope and reporting readiness require a separate fact and timeline check.", ["govuk-digital-waste-tracking-service", "govuk-report-receipt-of-waste"]))
         if role in {"carrier", "broker", "dealer"} or any(item in {"transport_waste", "arrange_waste"} for item in activities):
             findings.append(_finding("DUTY-001", "warning", "review_required", "Confirm the applicable carrier/broker/dealer registration and duty-of-care controls for the supplied role.", ["govuk-waste-duty-of-care"]))

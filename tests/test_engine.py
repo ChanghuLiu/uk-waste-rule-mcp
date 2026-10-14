@@ -27,12 +27,20 @@ def base_scenario(**overrides):
 
 def test_receiver_routes_to_permit_and_digital_tracking_review(monkeypatch):
     import uk_waste_rule_mcp.engine as engine
-    monkeypatch.setattr(engine, "_source_gate", lambda _ids: {"decision_usable": True})
+    checked_sources = {}
+
+    def ready_sources(ids):
+        checked_sources["ids"] = ids
+        return {"decision_usable": True}
+
+    monkeypatch.setattr(engine, "_source_gate", ready_sources)
     result = waste_preflight(base_scenario())
     assert result["decision"]["route"] == "PERMIT_OR_EXEMPTION_AND_DIGITAL_TRACKING_REVIEW"
     assert result["decision"]["status"] == "SCREENING_COMPLETE_REVIEW_REQUIRED"
     assert result["decision"]["deterministic"] is True
-    assert "govuk-digital-waste-tracking-service" in {item["id"] for item in result["evidence"]}
+    required_sources = {"govuk-digital-waste-tracking-service", "govuk-report-receipt-of-waste"}
+    assert required_sources.issubset(checked_sources["ids"])
+    assert required_sources.issubset({item["id"] for item in result["evidence"]})
 
 
 def test_missing_authorisation_is_blocking_for_receiver():
