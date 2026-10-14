@@ -15,6 +15,13 @@ Production origin: `https://waste.regevidencehub.com`
 - OpenAPI: `/openapi.json`
 - LLM guide: `/llms.txt`
 
+## Free entry and customer report
+
+- Product page: [RegEvidenceHub Waste](https://regevidencehub.com/products/waste.html).
+- Free customer entry: [start the structured readiness check](https://waste.regevidencehub.com/compliance-report); the public AI MCP at `/ai/mcp` is payment-free.
+- Full England Waste Compliance Preflight Report: **£19 per report**, with **24-hour access** after purchase.
+- Commercial MCP decision calls are charged separately through x402; see [Decision workflows](#decision-workflows).
+
 ## Decision workflows
 
 Commercial decision tools:
