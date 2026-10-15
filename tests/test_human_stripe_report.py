@@ -3,7 +3,7 @@ import asyncio
 import httpx
 
 from uk_waste_rule_mcp.commercial import CommercialCheckout, CommercialPlatformClient
-from uk_waste_rule_mcp.human_report import render_page, validate_form
+from uk_waste_rule_mcp.human_report import classification, render_page, validate_form
 
 
 def _valid_form():
@@ -36,6 +36,11 @@ def test_human_report_requires_role_activity_and_fact_confirmation():
     payload, errors = validate_form({})
     assert payload is None
     assert len(errors) == 3
+
+
+def test_unmarked_human_submission_is_not_counted_as_confirmed_customer():
+    request = type("Request", (), {"url": type("URL", (), {"query": ""})()})()
+    assert classification(request, _valid_form(), posted=True) == ("unknown", False)
 
 
 def test_human_report_readiness_hides_full_decision_and_offers_stripe_report():

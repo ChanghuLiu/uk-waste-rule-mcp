@@ -42,7 +42,8 @@ def classification(request: Any, form: Mapping[str, str] | None = None, *, poste
         return "owner_test", True
     if raw in {"synthetic", "fixture"}:
         return "synthetic", False
-    return ("confirmed_external", False) if posted else ("unknown", False)
+    # A submitted form is not, by itself, proof of an external customer.
+    return "unknown", False
 
 def validate_form(form: Mapping[str, str]) -> tuple[dict[str, Any] | None, list[str]]:
     errors: list[str] = []
