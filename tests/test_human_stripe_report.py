@@ -99,3 +99,9 @@ def test_commercial_client_checkout_entitlement_and_event_contracts(monkeypatch)
     asyncio.run(run())
     checkout_request = next(item for item in seen if item.url.path == "/v1/checkout/session")
     assert checkout_request.headers["Idempotency-Key"] == "waste-human-test-123"
+
+
+def test_waste_staging_form_is_owner_test(monkeypatch):
+    monkeypatch.setenv("RAILWAY_SERVICE_NAME", "waste-exec-staging")
+    request = type("Request", (), {"url": type("URL", (), {"query": ""})()})()
+    assert classification(request, _valid_form(), posted=True) == ("owner_test", True)

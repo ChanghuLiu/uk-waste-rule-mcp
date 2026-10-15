@@ -37,6 +37,8 @@ def source_bucket(request: Any, form: Mapping[str, str] | None = None) -> str:
     return raw[:64] or "regevidencehub"
 
 def classification(request: Any, form: Mapping[str, str] | None = None, *, posted: bool) -> tuple[str, bool]:
+    if os.getenv("RAILWAY_SERVICE_NAME", "").strip().lower().endswith("-staging"):
+        return "owner_test", True
     raw = str((form or {}).get("run_class") or query_value(request, "run") or "").strip().lower()
     if raw in {"owner", "owner_test", "test", "smoke", "ci"}:
         return "owner_test", True
