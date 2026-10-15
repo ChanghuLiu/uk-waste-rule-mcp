@@ -87,6 +87,8 @@ def declared_client(meta: Mapping[str, Any] | None) -> tuple[str | None, str | N
     return _safe(info.get("name"), 80), _safe(info.get("version"), 32)
 
 def classify(meta: Mapping[str, Any] | None) -> tuple[str, bool]:
+    if os.getenv("RAILWAY_SERVICE_NAME", "").strip().lower().endswith("-staging"):
+        return "owner_test", True
     meta = meta or {}
     actor = str(meta.get("mcp-commercial-actor") or meta.get("waste/actor") or "").strip().lower()
     marker = str(meta.get("owner_test_marker") or "").strip().lower()

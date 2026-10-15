@@ -1,14 +1,18 @@
 """Production HTTP/MCP surface for RegEvidenceHub Waste."""
 from __future__ import annotations
+from .form_feedback import feedback_page, with_form_feedback, bind_form_values, error_summary
 
 import asyncio
 import json
 import os
 import secrets
 import time
+from urllib.parse import parse_qs
 from typing import Any
 
 from . import __version__
+from .report_ui import message_response, paid_report_html
+from .report_questions import QuestionFormError, questions_html, scenario_from_questions, STYLE as QUESTION_STYLE, SCRIPT as QUESTION_SCRIPT
 from .analytics import public_usage_summary, record_call, record_discovery
 from .engine import (
     PRODUCT,
@@ -18,9 +22,9 @@ from .engine import (
     permit_change_impact as impact,
     waste_preflight,
 )
-from .monitor import refresh_source_registry, source_health
+from .monitor import check_all_sources, refresh_source_registry, source_health
 from .case_state import DurableCaseStore
-from .commercial import CommercialPlatformClient
+from .commercial import CommercialPlatformClient, CommercialPlatformError, PendingWasteReportStore
 from .entitlement_token import verify_entitlement_token
 from .human_report import (
     CANCEL_ROUTE as HUMAN_CANCEL_ROUTE,
@@ -53,9 +57,150 @@ SHARED_EXECUTION_WORKFLOWS = {
     "waste_digital_tracking_readiness": (DigitalTrackingScenario, digital_waste_tracking_receipt_readiness),
     "waste_permit_change_preflight": (PermitChangeScenario, impact),
 }
+
+
+@feedback_page
+def _waste_report_form(values=None, errors=None, error_fields=None):
+    values = dict(values or {})
+    workflow = str(values.get("workflow") or "waste_rule_preflight")
+    if workflow not in SHARED_EXECUTION_WORKFLOWS:
+        workflow = "waste_rule_preflight"
+    values["workflow"] = workflow
+    markup = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Waste compliance report — RegEvidenceHub</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6fb;color:#18324b;font:16px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:#1d4ed8;text-underline-offset:3px}
+.wrap{max-width:1080px;margin:0 auto;padding:48px 28px 32px}
+.brand{display:flex;align-items:center;gap:10px;margin:0 0 32px;color:#1d4ed8;font-size:.8rem;font-weight:750;letter-spacing:.09em}
+.brand-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:#1d4ed8;color:white;font-size:1rem;letter-spacing:0}
+.hero{max-width:760px;margin-bottom:30px}
+.tag{display:inline-block;padding:4px 11px;border:1px solid #cfdaeb;border-radius:99px;background:#fff;color:#44607a;font-size:.8rem;font-weight:650}
+h1{margin:14px 0 14px;font-size:clamp(1.9rem,4vw,2.7rem);line-height:1.15;letter-spacing:-.035em;color:#122b44}
+.hero p{margin:0;color:#506780;max-width:700px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:24px;align-items:start}
+.card{border:1px solid #dce5f0;border-radius:18px;background:#fff;box-shadow:0 10px 30px #19365508;padding:30px}
+h2{margin:0 0 7px;font-size:1.25rem;line-height:1.3;letter-spacing:-.02em}
+.subtext{margin:0;color:#596f86;font-size:.93rem}
+.field{margin-top:25px}
+label{display:block;font-weight:650;margin-bottom:8px;color:#18324b}
+.helper{display:block;margin:7px 0 0;color:#596f86;font-size:.86rem;line-height:1.5}
+select,input,textarea{display:block;width:100%;border:1px solid #b9c9dc;border-radius:10px;background:#fff;color:#19334d;font:inherit;padding:12px 14px}
+select,input{min-height:50px}
+select{cursor:pointer}
+textarea{min-height:220px;resize:vertical;font:14px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;background:#f9fbfe}
+textarea::placeholder{color:#657c94;opacity:1}
+input::placeholder{color:#657c94}
+:where(select,input,textarea,button,a,summary):focus-visible{outline:3px solid #91b8ff;outline-offset:3px}
+button{display:block;width:100%;min-height:52px;margin-top:28px;padding:13px 18px;border:0;border-radius:10px;background:#1d4ed8;color:#fff;font:700 1rem system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 10px #1d4ed81a}
+button:hover{background:#173faf}
+.payment-note{margin:10px 0 0;text-align:center;color:#596f86;font-size:.8rem}
+.summary-card{padding:26px;background:#163451;color:#fff;border:1px solid #163451;border-radius:18px}
+.summary-card h2{font-size:1rem;color:#d6e5f5;font-weight:650}
+.price{margin:16px 0 5px;font-size:2.8rem;font-weight:750;letter-spacing:-.045em;line-height:1.1}
+.price span{font-size:.85rem;font-weight:550;letter-spacing:0;color:#c6d9eb}
+.summary-intro{margin:0 0 23px;color:#c6d9eb;font-size:.88rem}
+.features{list-style:none;padding:0;margin:0;border-top:1px solid #ffffff26}
+.features li{position:relative;padding:15px 0 15px 23px;border-bottom:1px solid #ffffff26;font-size:.9rem;line-height:1.5}
+.features li::before{content:"✓";position:absolute;left:0;color:#9fdbcc;font-weight:700}
+.features strong{display:block;font-size:.93rem}
+.features span{color:#c6d9eb;font-size:.85rem}
+.access-note{margin:20px 0 0;color:#c6d9eb;font-size:.82rem}
+.recovery{margin-top:22px;border:1px solid #dce5f0;border-radius:12px;background:#fff;padding:17px 20px;color:#314e69}
+.recovery summary{font-weight:650;cursor:pointer}
+.recovery p{margin:12px 0 0;font-size:.9rem;color:#596f86}
+.recovery a{display:inline-block;margin-top:10px;font-size:.92rem;font-weight:650}
+footer{display:flex;justify-content:space-between;align-items:start;gap:22px;margin-top:30px;color:#65778c;font-size:.8rem}
+footer p{margin:0;max-width:730px}
+footer a{white-space:nowrap}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.wrap{padding:28px 20px}.brand{margin-bottom:24px}.summary-card{order:2}.card{padding:24px}.hero{margin-bottom:24px}.features{display:grid;grid-template-columns:1fr 1fr;column-gap:18px}footer{flex-direction:column;gap:12px}}
+@media(max-width:460px){.wrap{padding:24px 16px}.card,.summary-card{padding:22px 20px}h1{font-size:1.9rem}.features{grid-template-columns:1fr}.layout{gap:18px}select{font-size:.9rem}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<p class="brand"><span class="brand-mark" aria-hidden="true">R</span>REG EVIDENCE HUB · WASTE</p>
+<header class="hero">
+<span class="tag">England waste preflight</span>
+<h1>England Waste Compliance Preflight Report</h1>
+<p>Prepare an evidence-linked report for your waste operation. Choose a report type, answer the questions and continue to secure checkout.</p>
+</header>
+<div class="layout">
+<section class="card" aria-labelledby="form-title">
+<h2 id="form-title">Prepare your report</h2>
+<p class="subtext">No product account is required.</p>
+<form method="post" action="/waste-report/checkout">
+<div class="field">
+<label for="workflow">Preflight type</label>
+<select id="workflow" name="workflow">
+<option value="waste_rule_preflight">Waste rules and permit route — £19</option>
+<option value="waste_carrier_broker_dealer_preflight">Carrier, broker or dealer registration — £19</option>
+<option value="waste_digital_tracking_readiness">Digital Waste Tracking readiness — £19</option>
+<option value="waste_permit_change_preflight">Permit change impact — £19</option>
+</select>
+</div>
+@@QUESTIONS@@
+<div class="field">
+<label for="contact-email">Checkout email</label>
+<input id="contact-email" name="contact_email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com" aria-describedby="email-help">
+<p class="helper" id="email-help">Use this same email to recover your report during its access period.</p>
+</div>
+<button type="submit">Continue to secure Stripe Checkout →</button>
+<p class="payment-note">Stripe handles payment. Your case details stay with the Waste service.</p>
+</form>
+</section>
+<aside class="summary-card" aria-labelledby="summary-title">
+<h2 id="summary-title">One evidence-linked report</h2>
+<p class="price">£19.00 <span>GBP</span></p>
+<p class="summary-intro">One-time payment · No subscription</p>
+<ul class="features">
+<li><strong>Deterministic preflight</strong><span>A report for the scenario you supply.</span></li>
+<li><strong>Official-source evidence</strong><span>Review the cited sources and any missing facts.</span></li>
+<li><strong>24-hour access</strong><span>Open and recover your report during the access period.</span></li>
+</ul>
+<p class="access-note">Email recovery does not extend an expired access period.</p>
+</aside>
+</div>
+<details class="recovery">
+<summary>Already purchased a report?</summary>
+<p>Use your order reference and original checkout email to recover access before it expires.</p>
+<a href="/waste-report/recover">Recover a paid report →</a>
+</details>
+<footer>
+<p>Informational preflight only; not Environment Agency approval or legal advice. Resolve review-required findings before acting.</p>
+<a href="/pricing">API pricing</a>
+</footer>
+</main>
+</body>
+</html>"""
+    fields = {message: "contact-email" if "email" in message.lower() else "workflow" if message.startswith("Preflight type") else "" for message in (errors or [])}
+    fields.update(error_fields or {})
+    markup = markup.replace("@@QUESTIONS@@", questions_html(workflow, values))
+    markup = markup.replace("</style>", QUESTION_STYLE + "</style>", 1)
+    markup = markup.replace("</body>", "<script>" + QUESTION_SCRIPT + "</script></body>", 1)
+    markup = markup.replace('<form method="post" action="/waste-report/checkout">', error_summary(errors, fields) + '<form method="post" action="/waste-report/checkout">', 1)
+    return bind_form_values(markup, values or {})
+
+
+def _waste_recovery_bootstrap_response():
+    return message_response(
+        "Opening recovered report…", "Verifying access",
+        script="(()=>{const p=new URLSearchParams(location.hash.slice(1));history.replaceState(null,'',location.pathname);const checkout_id=p.get('checkout_id'),report_session=p.get('report_session');if(!checkout_id||!report_session){document.getElementById('status').textContent='Recovery link is missing or expired.';return;}fetch('/api/v1/report-access/redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({checkout_id,report_session})}).then(r=>{if(!r.ok)throw Error();location.replace('/waste-report/checkout-success?checkout_id='+encodeURIComponent(checkout_id));}).catch(()=>{document.getElementById('status').textContent='Payment may still be processing, or this recovery link is invalid, expired, or already used.';});})();", status_id=True,
+    )
+
 COMMERCIAL_CLIENT = CommercialPlatformClient()
 CASE_RUNTIME_DIR = os.getenv("WASTE_RUNTIME_DIR") or ("/data/waste-rule-mcp" if os.getenv("RAILWAY_ENVIRONMENT") else "/tmp/waste-rule-mcp")
 DURABLE_CASES = DurableCaseStore(CASE_RUNTIME_DIR, ttl_seconds=int(os.getenv("WASTE_CASE_TTL_SECONDS", "86400")))
+REPORT_CHECKOUTS = PendingWasteReportStore(
+    os.getenv("WASTE_REPORT_CHECKOUT_STORE_PATH", "").strip() or os.path.join(CASE_RUNTIME_DIR, "report-checkouts.json"),
+    ttl_seconds=int(os.getenv("WASTE_REPORT_CHECKOUT_TTL_SECONDS", "604800")),
+)
 
 def shared_execution_enabled() -> bool:
     return os.getenv("WASTE_SHARED_EXECUTION_ENABLED", "0").strip() == "1"
@@ -282,7 +427,7 @@ def build_server():
         from mcp.server import MCPServer
         from mcp.server.mcpserver.context import Context
         from mcp.types import CallToolResult, ToolAnnotations
-        from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
+        from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
     except ImportError as exc:
         raise RuntimeError("Install the MCP extra and x402 v2 runtime") from exc
 
@@ -359,6 +504,176 @@ def build_server():
         marker = str(request.headers.get("x-mcp-commercial-actor","")).strip().lower()
         record_discovery(route, request.url.query, owned_probe=marker in {"owned","owned_ci","owner","test","smoke"})
 
+    @server.custom_route("/waste-report", methods=["GET"], include_in_schema=False)
+    async def waste_report_page(_request):
+        return HTMLResponse(_waste_report_form())
+
+    @server.custom_route("/waste-report/checkout", methods=["POST"], include_in_schema=False)
+    async def waste_report_checkout(request):
+        from html import escape
+        form = {}
+        error_fields = {}
+        content_type = request.headers.get("content-type", "")
+        try:
+            if "application/json" in content_type:
+                form = await request.json()
+            else:
+                parsed = parse_qs((await request.body()).decode("utf-8", "replace"), keep_blank_values=True)
+                form = {key: values[-1] for key, values in parsed.items()}
+            workflow = str(form.get("workflow") or "")
+            if workflow not in SHARED_EXECUTION_WORKFLOWS:
+                raise ValueError("Preflight type: choose an option from the supported list.")
+            if form.get("form_version") == "questions-v1" and "application/json" not in content_type:
+                payload = scenario_from_questions(form, workflow)
+            else:
+                payload_value = form.get("payload")
+                payload = json.loads(payload_value) if isinstance(payload_value, str) else payload_value
+            contact_email = str(form.get("contact_email") or "").strip()
+            if not isinstance(payload, dict):
+                raise ValueError('Scenario details: enter a JSON object with field names and values, for example {"nation":"England","role":"receiver","activities":["receive_waste"]}.')
+            if not contact_email or len(contact_email) > 254 or contact_email.count("@") != 1 or contact_email.startswith("@") or contact_email.endswith("@") or any(ch.isspace() for ch in contact_email):
+                raise ValueError("Checkout email: enter a valid email address, for example you@example.com.")
+            model, _executor = SHARED_EXECUTION_WORKFLOWS[workflow]
+            validated_payload = model.model_validate(payload).model_dump(exclude_none=True)
+        except Exception as exc:
+            if isinstance(exc, QuestionFormError):
+                errors = exc.messages
+                error_fields = exc.fields
+            elif isinstance(exc, json.JSONDecodeError):
+                errors = [f"Scenario details: invalid JSON at line {exc.lineno}, column {exc.colno}. Use double quotes around text and remove trailing commas."]
+            elif hasattr(exc, "errors"):
+                errors = []
+                for issue in exc.errors():
+                    field = ".".join(str(part) for part in issue.get("loc", ())) or "scenario"
+                    kind = issue.get("type", "")
+                    expected = (issue.get("ctx") or {}).get("expected")
+                    if kind == "missing":
+                        action = "add this required field"
+                    elif expected and kind in {"enum", "literal_error"}:
+                        action = "choose " + str(expected)
+                    elif kind.startswith("bool"):
+                        action = "use true or false without quotation marks"
+                    elif kind.startswith("int"):
+                        action = "use a whole number"
+                    elif kind.startswith("list"):
+                        action = 'use a JSON list, for example ["receive_waste"]'
+                    elif kind.startswith("string"):
+                        action = "use text in double quotation marks"
+                    else:
+                        action = "check the value and type against your selected preflight schema"
+                    errors.append(f"Scenario details — {field}: {action}.")
+            elif isinstance(exc, ValueError):
+                errors = [str(exc)]
+            else:
+                errors = ["Scenario details: check your selected preflight and JSON fields, then try again."]
+            if "application/json" in content_type:
+                return JSONResponse({"status": "invalid_request", "errors": errors}, status_code=422)
+            return HTMLResponse(_waste_report_form(values=form, errors=errors, error_fields=error_fields), status_code=422, headers={"Cache-Control": "no-store"})
+
+        pending_token = REPORT_CHECKOUTS.create(workflow=workflow, payload=validated_payload)
+        source_channel = "direct"
+        try:
+            checkout = await COMMERCIAL_CLIENT.create_report_checkout(
+                contact_email=contact_email,
+                source_channel=source_channel,
+                success_url=f"{PUBLIC_ORIGIN}/waste-report/checkout-success",
+                cancel_url=f"{PUBLIC_ORIGIN}/waste-report/checkout-cancelled",
+            )
+            REPORT_CHECKOUTS.attach_checkout(pending_token, checkout["checkout_id"])
+        except Exception:
+            REPORT_CHECKOUTS.discard(pending_token)
+            return message_response('Checkout is temporarily unavailable', 'Your case has not been charged. Try again later.', 503)
+        response = RedirectResponse(checkout["checkout_url"], status_code=303)
+        response.set_cookie(key=f"report_claim_{checkout['checkout_id']}", value=checkout["report_claim_token"], max_age=1800, httponly=True,
+                            secure=PUBLIC_ORIGIN.startswith("https://"), samesite="lax", path="/waste-report/checkout-success")
+        return response
+
+    @server.custom_route("/waste-report/checkout-success", methods=["GET"], include_in_schema=False)
+    async def waste_report_success(request):
+        from html import escape
+        checkout_id = request.query_params.get("checkout_id", "") or next((key.removeprefix("report_session_") for key in request.cookies if key.startswith("report_session_")), "")
+        if not checkout_id:
+            checkout_id = next((key.removeprefix("report_claim_") for key in request.cookies if key.startswith("report_claim_")), "")
+        if not checkout_id:
+            return _waste_recovery_bootstrap_response()
+        row = REPORT_CHECKOUTS.get_by_checkout_id(checkout_id)
+        if row is None:
+            if "text/html" in request.headers.get("accept", "").lower():
+                return _waste_recovery_bootstrap_response()
+            return message_response('Report unavailable', 'Use verified-email recovery or restart checkout.', 403)
+        report_session = request.cookies.get(f"report_session_{checkout_id}")
+        if not report_session:
+            claim = request.cookies.get(f"report_claim_{checkout_id}")
+            if not claim:
+                return message_response('Report unavailable', 'Use verified-email recovery.', 403)
+            try:
+                claimed = await COMMERCIAL_CLIENT.claim_report_access(checkout_id=checkout_id, report_claim_token=claim)
+                report_session = str(claimed["report_session"])
+            except Exception:
+                return message_response('Payment pending', 'We could not verify paid access yet. Refresh this page or recover by email.', 403)
+        try:
+            verified = await COMMERCIAL_CLIENT.verify_report_access(checkout_id=checkout_id, report_session=report_session)
+        except Exception:
+            verified = False
+        if not verified:
+            if "text/html" in request.headers.get("accept", "").lower() and request.cookies.get(f"report_session_{checkout_id}"):
+                return _waste_recovery_bootstrap_response()
+            return message_response('Report unavailable', 'Access could not be verified.', 403)
+        model, executor = SHARED_EXECUTION_WORKFLOWS[row["workflow"]]
+        report = executor(model.model_validate(row["payload"]).model_dump(exclude_none=True))
+        response = HTMLResponse(paid_report_html(report, checkout_id), headers={"Cache-Control":"private, no-store", "Referrer-Policy":"no-referrer", "Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"})
+        response.set_cookie(key=f"report_session_{checkout_id}", value=report_session, max_age=86400, httponly=True, secure=PUBLIC_ORIGIN.startswith("https://"), samesite="lax", path="/waste-report/checkout-success")
+        response.delete_cookie(key=f"report_claim_{checkout_id}", path="/waste-report/checkout-success")
+        return response
+
+    @server.custom_route("/waste-report/checkout-cancelled", methods=["GET"], include_in_schema=False)
+    async def waste_report_cancelled(_request):
+        return message_response('Checkout cancelled', 'No paid report was created.', 200)
+
+    @server.custom_route("/api/v1/report-access/redeem", methods=["POST"], include_in_schema=False)
+    async def redeem_waste_report(request):
+        try:
+            body = await request.json()
+            checkout_id, report_session = str(body.get("checkout_id") or ""), str(body.get("report_session") or "")
+        except Exception:
+            return JSONResponse({"status":"invalid_request"}, status_code=422)
+        row = REPORT_CHECKOUTS.get_by_checkout_id(checkout_id)
+        try:
+            verified = bool(row is not None and await COMMERCIAL_CLIENT.verify_report_access(checkout_id=checkout_id, report_session=report_session))
+        except Exception:
+            verified = False
+        if not verified:
+            return JSONResponse({"status":"report_access_unavailable"}, status_code=403)
+        response = Response(status_code=204, headers={"Cache-Control":"no-store", "Referrer-Policy":"no-referrer"})
+        response.set_cookie(key=f"report_session_{checkout_id}", value=report_session, max_age=86400, httponly=True, secure=PUBLIC_ORIGIN.startswith("https://"), samesite="lax", path="/waste-report/checkout-success")
+        return response
+
+    @server.custom_route("/api/v1/report-access/recovery", methods=["POST"], include_in_schema=False)
+    async def waste_report_recovery(request):
+        from html import escape
+        try:
+            body = await request.json()
+            checkout_id, contact_email = str(body.get("checkout_id") or ""), str(body.get("contact_email") or "").strip()
+        except Exception:
+            return JSONResponse({"status":"invalid_request"}, status_code=422)
+        if not checkout_id or len(checkout_id) > 128 or any(ch.isspace() for ch in checkout_id):
+            return JSONResponse({"status":"invalid_request"}, status_code=422)
+        if len(contact_email) > 254 or contact_email.count("@") != 1 or contact_email.startswith("@") or contact_email.endswith("@") or any(ch.isspace() for ch in contact_email):
+            return JSONResponse({"status":"invalid_request"}, status_code=422)
+        try:
+            accepted = await COMMERCIAL_CLIENT.start_report_recovery(checkout_id=checkout_id, contact_email=contact_email)
+        except Exception:
+            accepted = False
+        if not accepted:
+            return JSONResponse({"status":"recovery_temporarily_unavailable"}, status_code=503, headers={"Cache-Control":"no-store"})
+        return JSONResponse({"status":"If a paid report matches those details, a recovery link will be sent."}, headers={"Cache-Control":"no-store"})
+
+    @server.custom_route("/waste-report/recover", methods=["GET"], include_in_schema=False)
+    async def waste_report_recover(request):
+        from html import escape
+        checkout_id = escape(request.query_params.get("checkout_id", ""), quote=True)
+        page = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>Recover Waste report — RegEvidenceHub</title><style>*{box-sizing:border-box}body{margin:0;background:#f3f6fb;color:#18324b;font:16px/1.55 system-ui,sans-serif}.wrap{max-width:680px;margin:8vh auto;padding:24px}.card{background:#fff;border:1px solid #dbe4ef;border-top:4px solid #2160e8;border-radius:16px;padding:clamp(22px,5vw,38px);box-shadow:0 12px 36px #17325012}.eyebrow{color:#185adb;font-size:.78rem;font-weight:750;letter-spacing:.1em}h1{font-size:clamp(1.7rem,4vw,2.2rem);line-height:1.15;margin:0 0 12px}.intro{color:#51677e;margin:0 0 24px}.field{display:block;margin:18px 0}.field span{display:block;font-weight:650;margin-bottom:7px}input{width:100%;min-height:48px;padding:11px 13px;border:1px solid #b8c8da;border-radius:9px;font:inherit}button{width:100%;min-height:50px;margin-top:8px;border:0;border-radius:9px;background:#2160e8;color:#fff;font:700 1rem system-ui,sans-serif;cursor:pointer}button:disabled{opacity:.65}#status{margin:20px 0 0;padding:13px 15px;border-radius:10px;background:#eef4ff;color:#244a77}#status[hidden]{display:none}#status[data-state=success]{background:#eaf8ef;color:#17633b}#status[data-state=error]{background:#fff0f0;color:#992c2c}.foot{font-size:.9rem;color:#64788d}</style></head><body><main class="wrap"><section class="card"><p class="eyebrow">REG EVIDENCE HUB · WASTE</p><h1>Recover your paid report</h1><p class="intro">Enter your order reference and checkout email. We’ll send a secure link if they match a paid report. No further payment is needed.</p><form id="form"><label class="field"><span>Order reference</span><input name="checkout_id" required maxlength="128" autocomplete="off" value="__ORDER_REF__"></label><label class="field"><span>Checkout email</span><input name="contact_email" type="email" autocomplete="email" maxlength="254" required></label><button type="submit">Send recovery link</button></form><p id="status" role="status" aria-live="polite" aria-atomic="true" hidden></p><p class="foot">For your security, we won’t reveal whether an order or email matched.</p></section></main><script>const f=document.getElementById('form'),b=f.querySelector('button'),s=document.getElementById('status');f.addEventListener('submit',async e=>{e.preventDefault();if(!f.reportValidity())return;b.disabled=true;b.textContent='Sending…';s.hidden=false;s.dataset.state='';s.textContent='Sending your request…';const c=new AbortController(),t=setTimeout(()=>c.abort(),10000);try{const r=await fetch('/api/v1/report-access/recovery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({checkout_id:f.elements.checkout_id.value.trim(),contact_email:f.elements.contact_email.value.trim()}),signal:c.signal});if(!r.ok)throw Error('request');s.dataset.state='success';s.innerHTML='<strong>Recovery request received</strong><br>If a paid report matches those details, a recovery link will be sent.<br><strong>Open your email and use the newest recovery link.</strong>'}catch(x){s.dataset.state='error';s.textContent=x.name==='AbortError'?'Request timed out. Check your email before trying again.':'Recovery is temporarily unavailable. Try again later.'}finally{clearTimeout(t);b.disabled=false;b.textContent='Send recovery link'}});</script></body></html>""".replace("__ORDER_REF__", checkout_id)
+        return HTMLResponse(with_form_feedback(page), headers={"Cache-Control":"no-store", "Referrer-Policy":"no-referrer", "Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"})
     async def _read_human_form(request) -> dict[str, str]:
         from urllib.parse import parse_qs
         body = (await request.body()).decode("utf-8", errors="replace")
@@ -408,7 +723,7 @@ def build_server():
         if errors or payload is None:
             return HTMLResponse(
                 render_human_page(
-                    form=human_form_html(HUMAN_READINESS_ROUTE, src=source, run_class=run_class),
+                    form=human_form_html(HUMAN_READINESS_ROUTE, src=source, run_class=run_class, values=form),
                     errors=errors,
                     src=source,
                     run_class=run_class,
@@ -420,7 +735,7 @@ def build_server():
         )
         return HTMLResponse(
             render_human_page(
-                form=human_form_html(HUMAN_READINESS_ROUTE, src=source, run_class=run_class),
+                form=human_form_html(HUMAN_READINESS_ROUTE, src=source, run_class=run_class, values=form),
                 payload=payload,
                 src=source,
                 run_class=run_class,
@@ -436,7 +751,7 @@ def build_server():
         if errors or payload is None:
             return HTMLResponse(
                 render_human_page(
-                    form=human_form_html(HUMAN_READINESS_ROUTE, src=source),
+                    form=human_form_html(HUMAN_READINESS_ROUTE, src=source, values=form),
                     errors=errors,
                     src=source,
                 ),
@@ -619,6 +934,7 @@ def build_server():
 <li><code>waste_digital_tracking_readiness</code> — $0.03 USDC</li>
 <li><code>waste_permit_change_preflight</code> — $0.03 USDC</li></ul>
 <p>MCP: <code>{MCP_URL}</code></p><p>Public AI MCP: <code>{PUBLIC_ORIGIN}/ai/mcp</code></p>
+<p><a href="/waste-report">Buy a one-off verified report — £19</a> · <a href="/pricing">API pricing</a> · <a href="/llms.txt">llms.txt</a> · <a href="/.well-known/agent-card.json">agent card</a> · <a href="/metrics">metrics</a></p>
 <p><strong>Human/business report:</strong> <a href="{HUMAN_REPORT_ROUTE}">England Waste Compliance Preflight Report — £19.00</a> with 24-hour entitlement.</p>
 <p><a href="/pricing">pricing</a> · <a href="/llms.txt">llms.txt</a> · <a href="/.well-known/agent-card.json">agent card</a> · <a href="/metrics">metrics</a></p>
 <p>Informational preflight only; not Environment Agency approval or legal advice.</p></main></body></html>"""
@@ -677,7 +993,7 @@ def build_server():
 
     @server.custom_route("/sitemap.xml", methods=["GET"], include_in_schema=False)
     async def sitemap(_request):
-        urls=["/",HUMAN_REPORT_ROUTE,"/pricing","/privacy","/terms","/support","/llms.txt","/.well-known/agent-card.json"]
+        urls=["/","/waste-report",HUMAN_REPORT_ROUTE,"/pricing","/privacy","/terms","/support","/llms.txt","/.well-known/agent-card.json"]
         body='<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(f"<url><loc>{PUBLIC_ORIGIN}{p}</loc></url>" for p in urls) + "</urlset>"
         return PlainTextResponse(body,media_type="application/xml")
 
