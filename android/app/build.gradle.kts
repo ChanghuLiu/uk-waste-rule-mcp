@@ -1,7 +1,20 @@
+import java.io.File
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+val wasteUploadPropertiesPath = providers.gradleProperty("wasteUploadProperties").orElse("${System.getProperty("user.home")}/.config/regevidencehub/waste-upload.properties").get()
+val wasteUploadPropertiesFile = file(wasteUploadPropertiesPath)
+val wasteUploadProperties = Properties().apply { if (wasteUploadPropertiesFile.isFile) wasteUploadPropertiesFile.inputStream().use { load(it) } }
+val wasteUploadValues = listOf("storeFile", "storePassword", "keyAlias", "keyPassword").map(wasteUploadProperties::getProperty)
+val wasteUploadStoreFile = wasteUploadValues.firstOrNull()?.let { candidate ->
+    val store = file(candidate)
+    if (store.isAbsolute) store else File(wasteUploadPropertiesFile.parentFile, candidate)
+}
+val wasteUploadSigningReady = wasteUploadValues.all { !it.isNullOrBlank() } && wasteUploadPropertiesFile.isFile && wasteUploadStoreFile?.isFile == true
 
 android {
     namespace = "com.regevidencehub.waste"
@@ -14,6 +27,16 @@ android {
         versionName = "1.0.0"
     }
     buildFeatures { compose = true; buildConfig = true }
+    signingConfigs {
+        create("upload") {
+            if (wasteUploadSigningReady) {
+                storeFile = wasteUploadStoreFile
+                storePassword = wasteUploadValues[1]
+                keyAlias = wasteUploadValues[2]
+                keyPassword = wasteUploadValues[3]
+            }
+        }
+    }
     sourceSets.getByName("debug").manifest.srcFile("src/debug/AndroidManifest.xml")
     sourceSets.getByName("release").manifest.srcFile("src/release/AndroidManifest.xml")
     buildTypes {
@@ -23,6 +46,7 @@ android {
             manifestPlaceholders["networkConfig"] = "@xml/network_security_config_debug"
         }
         release {
+            if (wasteUploadSigningReady) signingConfig = signingConfigs.getByName("upload")
             isDebuggable = false
             buildConfigField("String", "API_BASE_URL", "\"https://waste.regevidencehub.com\"")
             manifestPlaceholders["networkConfig"] = "@xml/network_security_config"
