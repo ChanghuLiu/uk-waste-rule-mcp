@@ -23,11 +23,11 @@ Waste Route Preflight helps you assess a supported England waste activity agains
 
 ## Local release state (2026-10-18)
 
-Unknown: no Play Console session or app/product listing was exposed for inspection. Verify or create the app/package and one-time product, then grant the existing Android Publisher service account access.
+Play Console was reviewed in the authenticated developer account on 2026-10-18. The app list showed ten total apps and only the separate Taxi / PHV Preflight package among RegEvidenceHub apps; this package has no matching app entry. Product, internal track, and Android Publisher service-account access are not configured/verified. App creation requires the account holder to attest Developer Programme Policy compliance and US export-law compliance; those declarations were not submitted.
 
 - Debug APK: `android/app/build/outputs/apk/debug/app-debug.apk` (for Works Watch: `app/build/outputs/apk/debug/app-debug.apk`). It was installed and launched on the attached ADB device; this was a sideloaded free-flow smoke only, not a Play Billing test.
 - `:app:testDebugUnitTest :app:assembleDebug`: passed after the release signing configuration change.
-- Release signing reads a local properties file outside the repository: `~/.config/regevidencehub/waste-upload.properties`. Override with `-PwasteUploadProperties=/absolute/path/to/file` (see the app Gradle file for the exact property name). Required keys are `storeFile`, `storePassword`, `keyAlias`, and `keyPassword`. Keep the file mode 0600 and the keystore outside the repository. No file was found, so no signed release AAB was generated.
+- Release signing reads a local properties file outside the repository: `~/.config/regevidencehub/waste-upload.properties`. Override with `-PwasteUploadProperties=/absolute/path/to/file` (see the app Gradle file for the exact property name). Required keys are `storeFile`, `storePassword`, `keyAlias`, and `keyPassword`. Keep the file mode 0600 and the keystore outside the repository. No app-specific signing file was found, so no signed release AAB was generated. Do not reuse the Taxi key for this package.
 - Required Play verifier setting: `WASTE_PLAY_SERVICE_ACCOUNT_JSON or WASTE_PLAY_SERVICE_ACCOUNT_FILE; WASTE_RUNTIME_DIR`. This is server-side only; never put it in the Android app. Runtime durability must use persistent Railway volume and existing runtime path /data/waste-rule-mcp.
 - Data Safety notes: the client sends user-entered preflight data to the existing backend for processing; purchase tokens are sent to the backend for Play verification and retained server-side only as SHA-256 fingerprints. Recovery credentials are stored by the client using Android Keystore. Review the linked privacy notice and the backend retention rules before completing the Play Data Safety form.
 
@@ -51,4 +51,4 @@ Unknown: no Play Console session or app/product listing was exposed for inspecti
 
 ## Console access and next human action
 
-Console inspection was not possible: the available Chrome browser automation failed to expose tabs, and no Play Console connector is available. Unknown: no Play Console session or app/product listing was exposed for inspection. Verify or create the app/package and one-time product, then grant the existing Android Publisher service account access.
+The authenticated Play Console account was inspected on 2026-10-18. Only Taxi / PHV Preflight appears among the RegEvidenceHub app entries; this package has no matching app entry, product, or internal track. App creation is blocked until the account holder personally confirms Developer Programme Policy and US export-law declarations. The app-specific upload signing file is also missing. After those human steps, make the production API route available, configure product/service-account access, upload a signed AAB to Internal Testing, and run the listed billing checks.
