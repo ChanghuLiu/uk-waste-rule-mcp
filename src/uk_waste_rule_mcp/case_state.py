@@ -59,3 +59,16 @@ class DurableCaseStore:
             except OSError: pass
             return None
         return row
+
+    def extend(self, state_ref: str, *, expires_at_epoch: int) -> bool:
+        """Extend a still-active case to align paid report access with its grant."""
+        row = self.get(state_ref)
+        if row is None or expires_at_epoch <= int(time.time()):
+            return False
+        updated = StoredCase(**{**row.__dict__, "expires_at_epoch": int(expires_at_epoch)})
+        path = self._path(state_ref)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(updated.__dict__, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, path)
+        return True

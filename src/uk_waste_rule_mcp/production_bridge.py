@@ -6,6 +6,7 @@ import json
 import os
 import secrets
 import time
+from pathlib import Path
 from typing import Any
 
 from . import __version__
@@ -805,6 +806,8 @@ def build_server():
 
     from .http_x402 import install_http_routes
     install_http_routes(server)
+    from .mobile_api import register_mobile_routes
+    register_mobile_routes(server, case_store=DURABLE_CASES, runtime_dir=Path(CASE_RUNTIME_DIR))
     return server
 
 def safe_mcp_surface_mounts(public_ai_app: object) -> list[object]:
