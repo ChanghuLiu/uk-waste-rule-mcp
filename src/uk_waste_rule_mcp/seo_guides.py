@@ -5,6 +5,7 @@ import json
 from html import escape
 
 GUIDE_PATH = "/guides/england-digital-waste-tracking-receiving-sites"
+GUIDE_IMAGE_PATH = "/guides/assets/england-waste-receiving-site.jpg"
 TITLE = "Digital Waste Tracking for England Waste Receiving Sites: Scope and Checklist"
 DESCRIPTION = (
     "Check whether your permitted or licensed site receiving controlled waste is in scope, "
@@ -39,7 +40,12 @@ def render_receiving_site_guide(public_origin: str) -> str:
 <meta property="og:title" content="{escape(TITLE, quote=True)}">
 <meta property="og:description" content="{escape(DESCRIPTION, quote=True)}">
 <meta property="og:url" content="{canonical}">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="{origin}{GUIDE_IMAGE_PATH}">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:alt" content="Illustration of a waste truck at a receiving-site weighbridge with an operator reviewing a tablet checklist.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{origin}{GUIDE_IMAGE_PATH}">
+<meta name="twitter:image:alt" content="Illustration of a waste truck at a receiving-site weighbridge with an operator reviewing a tablet checklist.">
 <script type="application/ld+json">{schema}</script>
 <style>
 :root{{color-scheme:light}}body{{font:18px/1.65 system-ui,sans-serif;color:#17202a;margin:0}}
@@ -110,11 +116,21 @@ li{{margin:.45rem 0}}.sources li{{overflow-wrap:anywhere}}.disclaimer{{font-size
 
 
 def register_seo_guides(server, public_origin: str) -> None:
-    from starlette.responses import HTMLResponse
+    from pathlib import Path
+    from starlette.responses import FileResponse, HTMLResponse
 
     @server.custom_route(GUIDE_PATH, methods=["GET"], include_in_schema=False)
     async def receiving_site_guide(_request):
         return HTMLResponse(
             render_receiving_site_guide(public_origin),
             headers={"Cache-Control": "public, max-age=300"},
+        )
+
+    @server.custom_route(GUIDE_IMAGE_PATH, methods=["GET"], include_in_schema=False)
+    async def receiving_site_guide_image(_request):
+        image_path = Path(__file__).parent / "assets" / "england-waste-receiving-site.jpg"
+        return FileResponse(
+            image_path,
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=86400"},
         )
