@@ -39,6 +39,7 @@ from .human_report import (
     validate_form as validate_human_form,
 )
 from .sources import source_registry
+from .seo_guides import GUIDE_PATH, register_seo_guides
 from .schemas import CarrierRegistrationScenario, DigitalTrackingScenario, PermitChangeScenario, WasteRuleScenario
 
 PUBLIC_ORIGIN = os.getenv("WASTE_PUBLIC_ORIGIN", "https://waste.regevidencehub.com").strip().rstrip("/")
@@ -620,7 +621,7 @@ def build_server():
 <li><code>waste_permit_change_preflight</code> — $0.03 USDC</li></ul>
 <p>MCP: <code>{MCP_URL}</code></p><p>Public AI MCP: <code>{PUBLIC_ORIGIN}/ai/mcp</code></p>
 <p><strong>Human/business report:</strong> <a href="{HUMAN_REPORT_ROUTE}">England Waste Compliance Preflight Report — £19.00</a> with 24-hour entitlement.</p>
-<p><a href="/pricing">pricing</a> · <a href="/llms.txt">llms.txt</a> · <a href="/.well-known/agent-card.json">agent card</a> · <a href="/metrics">metrics</a></p>
+<p><a href="{GUIDE_PATH}">England Digital Waste Tracking receiving-site guide</a> · <a href="/pricing">pricing</a> · <a href="/llms.txt">llms.txt</a> · <a href="/.well-known/agent-card.json">agent card</a> · <a href="/metrics">metrics</a></p>
 <p>Informational preflight only; not Environment Agency approval or legal advice.</p></main></body></html>"""
         )
 
@@ -681,7 +682,7 @@ def build_server():
 
     @server.custom_route("/sitemap.xml", methods=["GET"], include_in_schema=False)
     async def sitemap(_request):
-        urls=["/",HUMAN_REPORT_ROUTE,"/pricing","/privacy","/terms","/support","/llms.txt","/.well-known/agent-card.json"]
+        urls=["/",HUMAN_REPORT_ROUTE,"/pricing","/privacy","/terms","/support",GUIDE_PATH,"/llms.txt","/.well-known/agent-card.json"]
         body='<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(f"<url><loc>{PUBLIC_ORIGIN}{p}</loc></url>" for p in urls) + "</urlset>"
         return PlainTextResponse(body,media_type="application/xml")
 
@@ -805,6 +806,7 @@ def build_server():
 
     from .http_x402 import install_http_routes
     install_http_routes(server)
+    register_seo_guides(server, PUBLIC_ORIGIN)
     return server
 
 def safe_mcp_surface_mounts(public_ai_app: object) -> list[object]:
