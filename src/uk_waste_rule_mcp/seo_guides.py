@@ -6,6 +6,7 @@ from html import escape
 
 GUIDE_PATH = "/guides/england-digital-waste-tracking-receiving-sites"
 GUIDE_IMAGE_PATH = "/guides/assets/england-waste-receiving-site.jpg"
+INDEXNOW_KEY = "e69d2ed78df416e0128996035aa76503"
 TITLE = "Digital Waste Tracking for England Waste Receiving Sites: Scope and Checklist"
 DESCRIPTION = (
     "Check whether your permitted or licensed site receiving controlled waste is in scope, "
@@ -129,7 +130,11 @@ li{{margin:.45rem 0}}.sources li{{overflow-wrap:anywhere}}.disclaimer{{font-size
 
 def register_seo_guides(server, public_origin: str) -> None:
     from pathlib import Path
-    from starlette.responses import FileResponse, HTMLResponse
+    from starlette.responses import FileResponse, HTMLResponse, PlainTextResponse
+
+    @server.custom_route(f"/{INDEXNOW_KEY}.txt", methods=["GET"], include_in_schema=False)
+    async def indexnow_verification(_request):
+        return PlainTextResponse(INDEXNOW_KEY, headers={"Cache-Control": "public, max-age=86400"})
 
     @server.custom_route(GUIDE_PATH, methods=["GET"], include_in_schema=False)
     async def receiving_site_guide(_request):
