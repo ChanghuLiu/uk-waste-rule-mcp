@@ -367,7 +367,7 @@ def build_server():
         return {key: values[-1] if values else "" for key, values in parsed.items()}
 
     def _commercial_source_channel(source: str) -> str:
-        allowed = {"openai","claude","grok","regevidencehub","organic","directory","direct"}
+        allowed = {"openai","claude","grok","regevidencehub","rubbishtalk","organic","directory","direct"}
         return source if source in allowed else "direct"
 
     async def _safe_commercial_event(event_type: str, *, source: str, classification: str, owner_test: bool) -> None:
