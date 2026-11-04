@@ -32,7 +32,7 @@ def query_value(request: Any, name: str) -> str:
     return (parse_qs(query, keep_blank_values=True).get(name) or [""])[0]
 
 def source_bucket(request: Any, form: Mapping[str, str] | None = None) -> str:
-    raw = str((form or {}).get("src") or query_value(request, "src") or "regevidencehub").strip().lower()
+    raw = str((form or {}).get("src") or query_value(request, "src") or query_value(request, "utm_source") or "regevidencehub").strip().lower()
     return raw[:64] or "regevidencehub"
 
 def classification(request: Any, form: Mapping[str, str] | None = None, *, posted: bool) -> tuple[str, bool]:
