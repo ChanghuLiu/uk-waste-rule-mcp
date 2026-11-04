@@ -77,19 +77,28 @@ li{{margin:.45rem 0}}.sources li{{overflow-wrap:anywhere}}.disclaimer{{font-size
 </section>
 
 <h2>Who needs to report?</h2>
-<p>The receiving-site requirement applies to organisations with a permit or licence to receive controlled waste. Official guidance includes permitted operations, installations and mobile plants, including sites located where waste is produced. It also describes exceptions and alternative processes, including for people who meet the definition of digitally excluded.</p>
+<p>The England receiving-site requirement applies to organisations with a permit or licence to receive controlled waste. Official guidance includes permitted operations, installations and mobile plants, including sites located where waste is produced. An English household waste recycling centre does not have to use the service for household waste received from residents. A separate process applies to operators who meet the official definition of digitally excluded; preferring paper records, unfamiliarity with software, or added cost or time does not by itself meet that definition.</p>
+<p>This guide covers England. The digital reporting requirement took effect in England and Wales on 1 October 2026; the corresponding start date in Scotland and Northern Ireland is 1 January 2027. Check the relevant national guidance for operations outside England.</p>
 <p>Do not decide scope from a business name or simply because it handles waste. Confirm the legal operator, relevant permit or licence, site, and whether controlled waste is received. If these facts are uncertain, resolve them with the Environment Agency or a qualified adviser.</p>
 
 <h2>When must a receipt be reported?</h2>
 <p>For a receipt in England, submit the record within two working days, excluding weekends and bank holidays. The clock starts on the day after receipt. For example, a load received at 9 a.m. on Monday is due by 11:59 p.m. on Wednesday, assuming no bank holiday changes the working-day count.</p>
 <p>If the service or software reports an error, official guidance says to correct the submission within the same two-working-day timeframe. Build this deadline into the site’s gate, weighbridge or administration process rather than relying on a later manual review.</p>
+<h2>What records and returns continue?</h2>
+<p>Digital reporting does not currently replace every existing waste record or return. Until further notice, continue waste transfer notes, Annex VII forms and hazardous-waste consignment notes where required. Continue waste returns required by the environmental permit and hazardous-waste consignee returns. If a hazardous load has multiple consignment notes, report the waste covered by each note as a separate entry.</p>
+<h2>What if a record is wrong or the service is unavailable?</h2>
+<p>Correct a submission error reported by the service or your software within the same two-working-day window. If you later discover an error in submitted data or in waste information given to you, correct it as soon as possible and within one month of discovering it.</p>
+<p>If an outage prevents reporting, notify the regulator as soon as possible unless it has told you the service itself is unavailable. Make and retain a written receipt record within two working days from the day after receipt. Transfer it to the service within seven working days starting the day after the outage is resolved, and provide it to the regulator if requested.</p>
 
 <h2>What information should the site prepare?</h2>
 <p>The statutory data requirements cover details such as the waste movement, carrier and receiving site, waste classification, recovery or disposal route, and relevant hazardous-waste information. Use the official receipt-of-waste template and regulations to confirm the required fields for your case. Do not guess waste codes or hazardous status.</p>
 <p>Before reporting, identify who captures each fact, where the information comes from, and how missing or rejected data will be corrected. Train relevant staff and test the process using current official instructions.</p>
 
 <h2>Do sites need commercial software?</h2>
-<p>Not necessarily. Official guidance describes both the Report Receipt of Waste service and a spreadsheet template. If choosing software to upload through the API, check that it integrates with the receipt-of-waste service API and has passed the relevant Production Approval Test scenarios. The government’s provider list is based on provider self-certification; it is not an endorsement or a guarantee that a product fits every site. Check suitability against your operation and the scenarios you need.</p>
+<p>Not necessarily. Official guidance describes both the Report Receipt of Waste service and a spreadsheet template; a site can use a combination of spreadsheet and API submissions. If choosing software for API uploads, check that it records and submits the required data, connects to the service API, and has completed the relevant Production Approval Test (PAT) scenarios. Providers must explain which scenarios their product does not support. The GOV.UK provider list is not exhaustive and listed providers self-certify compliance. The list is not an endorsement or a guarantee that a product fits every site, so check suitability against your operation and regulatory needs.</p>
+
+<h2>Check permits and exemptions separately</h2>
+<p>A digital reporting requirement does not confirm that a site has the correct environmental authorisation. Depending on the activity, the Environment Agency route may involve a regulatory position statement, a registered exemption, a standard-rules permit or a bespoke permit. Check the current conditions for the specific operation. GOV.UK says waste exemption reforms are scheduled to come into force in January 2027, subject to parliamentary approval; verify the current position before relying on an exemption affected by those changes.</p>
 
 <h2>How can a preflight help?</h2>
 <p>RegEvidenceHub Waste is an independent, read-only preflight service. The free human input check confirms that the supplied role, activities and required fields fit the supported intake; it does not run the full regulatory preflight. The optional £19 report evaluates the supplied facts and can show a route, missing information, official-source evidence and a fail-closed review status. It does not submit waste records or provide DWT submission software.</p>
@@ -107,6 +116,9 @@ li{{margin:.45rem 0}}.sources li{{overflow-wrap:anywhere}}.disclaimer{{font-size
 <li><a href="https://www.gov.uk/guidance/report-receipt-of-waste">GOV.UK: Report receipt of waste</a></li>
 <li><a href="https://www.gov.uk/government/publications/report-receipt-of-waste-choose-a-software-provider/report-receipt-of-waste-choose-a-software-provider">GOV.UK: Choose a software provider</a></li>
 <li><a href="https://www.gov.uk/government/collections/digital-waste-tracking-guidance-and-information">GOV.UK: Digital Waste Tracking guidance and information</a></li>
+<li><a href="https://www.gov.uk/guidance/register-your-waste-exemptions">GOV.UK: Register your waste exemptions</a></li>
+<li><a href="https://www.gov.uk/government/publications/waste-exemptions-how-to-choose-register-and-pay/waste-exemptions-new-rules-from-january-2027">GOV.UK: Waste exemptions — new rules from January 2027</a></li>
+<li><a href="https://www.gov.uk/guidance/waste-environmental-permits">GOV.UK: Waste environmental permits</a></li>
 <li><a href="https://www.legislation.gov.uk/uksi/2026/729/contents/made">The Digital Waste Tracking (England) Regulations 2026</a></li>
 </ul>
 <p class="disclaimer">General information only. Not an Environment Agency approval, legal advice or a determination that a specific site is in scope. Verify your position with the current official sources and the regulator.</p>
