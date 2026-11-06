@@ -421,6 +421,7 @@ def digital_waste_tracking_receipt_readiness(scenario: dict[str, Any]) -> dict[s
     authorisation = _norm(scenario.get("receiving_authorisation"))
     receives_controlled = scenario.get("receives_controlled_waste")
     reporting_ready = scenario.get("reporting_method_ready")
+    defra_account_ready = scenario.get("defra_organisation_account_ready")
 
     raw_as_of = scenario.get("as_of_date")
     if raw_as_of:
@@ -466,6 +467,12 @@ def digital_waste_tracking_receipt_readiness(scenario: dict[str, Any]) -> dict[s
                     "DWT-READY-001", "blocking", "missing" if reporting_ready is None else "not_confirmed",
                     "Confirm a reporting route is operational before the mandatory start or before relying on this readiness result.",
                     sorted(source_ids),
+                ))
+            if defra_account_ready is not True:
+                findings.append(_finding(
+                    "DWT-ACCOUNT-001", "blocking", "missing" if defra_account_ready is None else "not_confirmed",
+                    "Confirm that the organisation has set up its Defra account for the Report receipt of waste service.",
+                    ["govuk-report-receipt-of-waste"],
                 ))
         elif authorisation in {"exemption", "registered_exemption"}:
             phase1_in_scope = False
@@ -517,8 +524,9 @@ def digital_waste_tracking_receipt_readiness(scenario: dict[str, Any]) -> dict[s
         "evidence": _source_subset(source_ids),
         "next_actions": [
             "Confirm the receiving-site authorisation and whether controlled waste is received.",
+            "Set up or confirm the organisation's Defra account for the Report receipt of waste service.",
             "Prepare either the receipt-of-waste API or the supported spreadsheet route before the mandatory date if the site is in scope.",
-            "Budget the £26 annual service charge for each organisation registered; it covers that organisation's receiving sites.",
+            "Budget the £26 annual service charge per registered organisation; it covers that organisation's receiving sites. The first payment is due 31 January 2027.",
             "Continue monitoring later Digital Waste Tracking phases for exemptions and collectors.",
         ],
         "limitations": [
