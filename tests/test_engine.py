@@ -11,6 +11,25 @@ from uk_waste_rule_mcp.sources import source_registry, source_registry_path
 from uk_waste_rule_mcp.x402_mcp2 import MCP2X402Gate
 
 
+
+@pytest.mark.parametrize("authorisation_status", ["exemption", "registered_exemption"])
+def test_exemption_reform_warning_is_shown_for_receivers(monkeypatch, authorisation_status):
+    import uk_waste_rule_mcp.engine as engine
+
+    monkeypatch.setattr(engine, "_source_gate", lambda ids: {"decision_usable": True})
+    result = waste_preflight(base_scenario(authorisation_status=authorisation_status))
+    warning = next(item for item in result["findings"] if item["code"] == "EXEMPTION-REFORM-001")
+    assert warning["status"] == "review_required"
+    assert "subject to Parliamentary approval" in warning["message"]
+    assert "6 January 2027" in warning["message"]
+    assert "waste-exemptions-how-to-choose-register-and-pay" in warning["message"]
+    assert result["decision"]["status"] == "SCREENING_COMPLETE_REVIEW_REQUIRED"
+
+
+def test_exemption_reform_warning_is_not_shown_for_permit():
+    result = waste_preflight(base_scenario(authorisation_status="permit"))
+    assert "EXEMPTION-REFORM-001" not in {item["code"] for item in result["findings"]}
+
 def base_scenario(**overrides):
     value = {
         "nation": "England",
