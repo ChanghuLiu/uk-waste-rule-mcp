@@ -233,6 +233,15 @@ def waste_preflight(scenario: dict[str, Any]) -> dict[str, Any]:
                 findings.append(_finding(f"FACT-{field.upper()}", "blocking", "missing", message, sorted(source_ids)))
         if role in {"receiver", "operator"} and scenario.get("authorisation_status") in (None, ""):
             findings.append(_finding("AUTH-001", "blocking", "missing", "State whether the site currently relies on a permit, exemption, licence or no authorisation; the route is not inferred.", ["govuk-environmental-permits", "govuk-waste-exemptions"]))
+        auth_status = _norm(scenario.get("authorisation_status", "")).replace(" ", "_")
+        if role in {"receiver", "operator"} and auth_status in {"exemption", "registered_exemption"}:
+            findings.append(_finding(
+                "EXEMPTION-REFORM-001",
+                "warning",
+                "review_required",
+                "Waste-exemption reforms are subject to Parliamentary approval and are expected from 6 January 2027. Confirm the activity-specific exemption, site registration, waste-type and quantity limits, and any withdrawal or transition deadline against the current official guidance before relying on an exemption: https://www.gov.uk/government/publications/waste-exemptions-how-to-choose-register-and-pay",
+                ["govuk-waste-exemptions"],
+            ))
         if "receive_waste" in activities:
             findings.append(_finding("DWT-001", "warning", "review_required", "Receiving-site digital tracking scope and reporting readiness require a separate fact and timeline check.", ["govuk-digital-waste-tracking-service", "govuk-report-receipt-of-waste"]))
         if role in {"carrier", "broker", "dealer"} or any(item in {"transport_waste", "arrange_waste"} for item in activities):
