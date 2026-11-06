@@ -218,6 +218,7 @@ def test_dwt_permitted_receiving_site_is_mandatory_from_october_2026(monkeypatch
         "receiving_authorisation": "permit",
         "receives_controlled_waste": True,
         "reporting_method_ready": True,
+        "defra_organisation_account_ready": True,
         "as_of_date": "2026-10-01",
     })
     assert result["decision"]["phase1_in_scope"] is True
@@ -246,3 +247,36 @@ def test_dwt_exemption_is_not_claimed_as_phase1_mandatory(monkeypatch):
     })
     assert result["decision"]["phase1_in_scope"] is False
     assert result["decision"]["requirement"] == "NOT_INCLUDED_IN_PHASE_1_CURRENT_MODEL"
+
+
+def test_dwt_permitted_site_requires_defra_organisation_account(monkeypatch):
+    import uk_waste_rule_mcp.engine as engine
+    monkeypatch.setattr(engine, "_source_gate", lambda _ids: {"decision_usable": True})
+    monkeypatch.setattr(engine, "_source_subset", lambda _ids: [])
+    result = engine.digital_waste_tracking_receipt_readiness({
+        "nation": "England",
+        "receiving_authorisation": "permit",
+        "receives_controlled_waste": True,
+        "reporting_method_ready": True,
+        "defra_organisation_account_ready": False,
+        "as_of_date": "2026-11-06",
+    })
+    assert result["decision"]["status"] == "INCOMPLETE"
+    finding = next(item for item in result["findings"] if item["code"] == "DWT-ACCOUNT-001")
+    assert finding["status"] == "not_confirmed"
+    assert finding["source_ids"] == ["govuk-report-receipt-of-waste"]
+
+
+def test_dwt_account_missing_is_incomplete(monkeypatch):
+    import uk_waste_rule_mcp.engine as engine
+    monkeypatch.setattr(engine, "_source_gate", lambda _ids: {"decision_usable": True})
+    monkeypatch.setattr(engine, "_source_subset", lambda _ids: [])
+    result = engine.digital_waste_tracking_receipt_readiness({
+        "nation": "England",
+        "receiving_authorisation": "permit",
+        "receives_controlled_waste": True,
+        "reporting_method_ready": True,
+        "as_of_date": "2026-11-06",
+    })
+    assert result["decision"]["status"] == "INCOMPLETE"
+    assert any(item["code"] == "DWT-ACCOUNT-001" and item["status"] == "missing" for item in result["findings"])
