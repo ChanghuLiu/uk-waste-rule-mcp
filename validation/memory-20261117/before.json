@@ -1,0 +1,97 @@
+{
+  "payload": {
+    "24h": {
+      "by_source_category": {
+        "agent": 16667,
+        "indexer": 16667,
+        "monitor": 16666
+      },
+      "by_source_family": {
+        "claude": 16667,
+        "openai": 16667,
+        "unknown_machine": 16666
+      },
+      "by_surface": {
+        "llms": 16667,
+        "mcp": 16667,
+        "openapi": 16666
+      },
+      "current_revision": "newrev",
+      "distinct_source_families": 3,
+      "index_freshness_by_source_family": {
+        "claude": {
+          "current_revision_seen": false,
+          "last_seen_at_unix": 1794916800,
+          "observed_revision": "oldrev"
+        },
+        "openai": {
+          "current_revision_seen": true,
+          "last_seen_at_unix": 1794916800,
+          "observed_revision": "newrev"
+        },
+        "unknown_machine": {
+          "current_revision_seen": false,
+          "last_seen_at_unix": 1794916800,
+          "observed_revision": "unknown"
+        }
+      },
+      "interpretation": "Machine discovery activity only; not a customer, buyer-intent, settlement or revenue count.",
+      "machine_discovery_confirmed_external": null,
+      "machine_discovery_non_owner_hits": 50000,
+      "privacy": "bounded labels plus deployment revision only; no IP, raw user-agent, query, payload, signature, wallet or address",
+      "revision_drift_detected": true,
+      "source_families_not_seen_on_current_revision": [
+        "claude",
+        "unknown_machine"
+      ]
+    },
+    "7d": {
+      "by_source_category": {
+        "agent": 25000,
+        "indexer": 25000,
+        "monitor": 25000
+      },
+      "by_source_family": {
+        "claude": 25000,
+        "openai": 25000,
+        "unknown_machine": 25000
+      },
+      "by_surface": {
+        "llms": 25000,
+        "mcp": 25000,
+        "openapi": 25000
+      },
+      "current_revision": "newrev",
+      "distinct_source_families": 3,
+      "index_freshness_by_source_family": {
+        "claude": {
+          "current_revision_seen": false,
+          "last_seen_at_unix": 1794916800,
+          "observed_revision": "oldrev"
+        },
+        "openai": {
+          "current_revision_seen": true,
+          "last_seen_at_unix": 1794916800,
+          "observed_revision": "newrev"
+        },
+        "unknown_machine": {
+          "current_revision_seen": false,
+          "last_seen_at_unix": 1794916800,
+          "observed_revision": "unknown"
+        }
+      },
+      "interpretation": "Machine discovery activity only; not a customer, buyer-intent, settlement or revenue count.",
+      "machine_discovery_confirmed_external": null,
+      "machine_discovery_non_owner_hits": 75000,
+      "privacy": "bounded labels plus deployment revision only; no IP, raw user-agent, query, payload, signature, wallet or address",
+      "revision_drift_detected": true,
+      "source_families_not_seen_on_current_revision": [
+        "claude",
+        "unknown_machine"
+      ]
+    }
+  },
+  "peak_kib": 47848,
+  "rss_kib": 29960,
+  "seconds": 0.135
+}

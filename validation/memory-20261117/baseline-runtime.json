@@ -1,0 +1,52 @@
+{
+  "hashes": {
+    "src/uk_waste_rule_mcp/__init__.py": "489d0cd6705fcd45dccfde497216fbfed66bdb44218bf384c4b98802193e8491",
+    "src/uk_waste_rule_mcp/analytics.py": "d95d1a3f35c4ad56f4d1b9c0ef923226334c5a8df55dc874c84bdf3c2b9a2bc0",
+    "src/uk_waste_rule_mcp/case_state.py": "aec877f172197867b5634327e1fab574f1b582dca6581b7e363c582602df1eef",
+    "src/uk_waste_rule_mcp/cdp_facilitator.py": "90ad326351a8bee4a196039793acb3af29f15cf3fa5b2d2e4347713384d12b09",
+    "src/uk_waste_rule_mcp/commercial.py": "4bc4baec77b6d89fa39b48c8422914d1dc31b8422ce8824acdb3f77cdeae27f9",
+    "src/uk_waste_rule_mcp/discovery_observability.py": "54363258b508058bbee9560141a650a23cd28a7b0f286d8db991ca72d9293bf5",
+    "src/uk_waste_rule_mcp/engine.py": "173772f20fcf8cbebd71f2e0d60204a3be356793063b94e05e1af4f57f8efc51",
+    "src/uk_waste_rule_mcp/entitlement_token.py": "1ac2ecb5530e767fc8300fe780ecef804cd09b6078ef271779a4c421db6bcd9a",
+    "src/uk_waste_rule_mcp/http_x402.py": "fca358586ff49e29d4f368e326016f59d3f7539535e53acada0bc3ffd9d86b03",
+    "src/uk_waste_rule_mcp/human_report.py": "f92ff4e337f150a283c7da067aee824706ee30e0377d854a0ea144c87442ade8",
+    "src/uk_waste_rule_mcp/monitor.py": "1e7c5fb86c348e548b40798e9abf5d7b99901dd05a1ee852ca80be918740f6ed",
+    "src/uk_waste_rule_mcp/production_bridge.py": "da49d24489986ca555378ee191194c094c6e0ea05fdf3e8e47e1a1b0e8db8b67",
+    "src/uk_waste_rule_mcp/public_ai_server.py": "00a96b5a898c38102ec82ce707bf3bdbb3c54209afe3b564c5b6b92205021289",
+    "src/uk_waste_rule_mcp/schemas.py": "b727d703a9f0f64497756e51a09eb038449c5f4ef9df5002c8c43774686f25d1",
+    "src/uk_waste_rule_mcp/seo_guides.py": "8105d68dc281852baac7bc0ef94e3b5e97955192656e2ddd5f4a2aab532908ea",
+    "src/uk_waste_rule_mcp/server.py": "3089ad0f39971231135bc54b14af18e0afc44fb9f28be999df3f3e61997ce2e0",
+    "src/uk_waste_rule_mcp/sources.py": "b63036e80d0fa03a48c2fc98a2f0123041ec893800d37aacba11202fb465cffd",
+    "src/uk_waste_rule_mcp/submission_pages.py": "8833733c5264c963caccd04be50759a6b84971a56ccf2ebcaefafd51fcff4f32",
+    "src/uk_waste_rule_mcp/x402_mcp2.py": "9a55ca25a42b922174f1b571876c664a63a1f18ecc3149ea70dc6ab782f99592"
+  },
+  "logs": {},
+  "memory": "169644032",
+  "processes": [
+    {
+      "pid": "1",
+      "status": [
+        "Name:\tuk-waste-rule-m",
+        "VmRSS:\t  140604 kB",
+        "RssAnon:\t  128308 kB"
+      ]
+    },
+    {
+      "pid": "271",
+      "status": [
+        "Name:\trwssh-ready",
+        "VmRSS:\t   10052 kB",
+        "RssAnon:\t    2368 kB"
+      ]
+    },
+    {
+      "pid": "281",
+      "status": [
+        "Name:\tpython",
+        "VmRSS:\t   16052 kB",
+        "RssAnon:\t    5912 kB"
+      ]
+    }
+  ],
+  "source_differences": []
+}

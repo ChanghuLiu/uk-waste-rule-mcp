@@ -131,34 +131,38 @@ def record(surface: str, family: str, category: str) -> None:
 
 def summary(hours: int) -> dict[str, Any]:
     since = int(time.time()) - hours * 3600
+    surfaces, families, categories = Counter(), Counter(), Counter()
+    current = _revision()
+    latest: dict[str, dict[str, Any]] = {}
+    hits = 0
     try:
         with _conn() as conn:
             rows = conn.execute(
                 "SELECT ts,surface,source_family,source_category,observed_revision FROM discovery_observability_v2 WHERE ts>=? ORDER BY ts ASC",
                 (since,),
-            ).fetchall()
+            )
+            for row in rows:
+                hits += 1
+                surfaces[str(row[1])] += 1
+                families[str(row[2])] += 1
+                categories[str(row[3])] += 1
+                family = str(row[2])
+                observed = str(row[4] or "unknown")
+                latest[family] = {
+                    "last_seen_at_unix": int(row[0]),
+                    "observed_revision": observed,
+                    "current_revision_seen": observed != "unknown" and current != "unknown" and observed == current,
+                }
     except Exception:
-        rows = []
-
-    surfaces = Counter(str(row[1]) for row in rows)
-    families = Counter(str(row[2]) for row in rows)
-    categories = Counter(str(row[3]) for row in rows)
-    current = _revision()
-    latest: dict[str, dict[str, Any]] = {}
-    for row in rows:
-        family = str(row[2])
-        observed = str(row[4] or "unknown")
-        latest[family] = {
-            "last_seen_at_unix": int(row[0]),
-            "observed_revision": observed,
-            "current_revision_seen": observed != "unknown" and current != "unknown" and observed == current,
-        }
+        hits = 0
+        surfaces, families, categories = Counter(), Counter(), Counter()
+        latest = {}
     stale = sorted(
         family for family, row in latest.items()
         if current != "unknown" and not row["current_revision_seen"]
     )
     return {
-        "machine_discovery_non_owner_hits": len(rows),
+        "machine_discovery_non_owner_hits": hits,
         "machine_discovery_confirmed_external": None,
         "distinct_source_families": len(families),
         "by_surface": dict(sorted(surfaces.items())),
