@@ -1,0 +1,62 @@
+{
+  "name": "waste",
+  "source_commit": "0a7e44d",
+  "deployment": "9f6da127-d625-485d-bad0-e989c531eda6",
+  "process_before_kib": 140604,
+  "process_after_loaded_kib": 145940,
+  "runtime": {
+    "container_memory_bytes": 149880832,
+    "hashes": {
+      "/app/src/uk_waste_rule_mcp/discovery_observability.py": "f48151ea5435a3355540507c6e76a04d0b632109c0fb3f01bf55dc5c81c37c5c"
+    },
+    "processes": [
+      {
+        "name": "uk-waste-rule-m",
+        "pid": 1,
+        "rss_kib": 145940
+      },
+      {
+        "name": "rwssh-ready",
+        "pid": 12,
+        "rss_kib": 9892
+      }
+    ]
+  },
+  "control_plane": {
+    "serviceId": "7e14b809-8c35-479b-8b3f-1b6e358d7567",
+    "serviceName": "waste-rule-mcp",
+    "state": "online",
+    "statusText": "Online",
+    "activeDeployments": [
+      {
+        "id": "9f6da127-d625-485d-bad0-e989c531eda6",
+        "status": "SUCCESS",
+        "createdAt": "2026-11-17T16:56:54.130Z",
+        "statusUpdatedAt": "2026-11-17T16:58:10.078Z"
+      }
+    ],
+    "replicaStatus": {
+      "running": 1,
+      "crashed": 0,
+      "total": 1
+    },
+    "cronJob": null,
+    "issues": {
+      "warningCount": 0,
+      "criticalCount": 0
+    },
+    "recentFailures": 0,
+    "recentFailedDeployments": [],
+    "hasIssues": false,
+    "isCronJob": false,
+    "hasVolume": true
+  },
+  "checks": 8,
+  "repeat_health": 3,
+  "limitations": [
+    "Short-term production measurements differ in uptime and include restart effects.",
+    "Controlled aggregate parity and peak-memory benchmark are separately recorded.",
+    "No invoice or guaranteed steady-state saving verified."
+  ],
+  "draft_pr": "https://github.com/ChanghuLiu/uk-waste-rule-mcp/pull/37"
+}
