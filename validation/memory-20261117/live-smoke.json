@@ -1,0 +1,52 @@
+[
+  {
+    "path": "/health",
+    "status": 200,
+    "seconds": 0.816,
+    "health": {
+      "contract": "regevidencehub-ops-v1",
+      "status": "review_required",
+      "serving": true,
+      "service": "RegEvidenceHub Waste",
+      "version": "0.4.1",
+      "commit": "unknown",
+      "source_state": "review_required",
+      "payment_state": "ready"
+    }
+  },
+  {
+    "path": "/status",
+    "status": 200,
+    "seconds": 0.388
+  },
+  {
+    "path": "/version",
+    "status": 200,
+    "seconds": 0.291
+  },
+  {
+    "path": "/metrics",
+    "status": 200,
+    "seconds": 0.206
+  },
+  {
+    "path": "/openapi.json",
+    "status": 200,
+    "seconds": 0.126
+  },
+  {
+    "path": "/mcp",
+    "status": 200,
+    "tool_count": 11
+  },
+  {
+    "free_metadata_tool": "waste_service_info",
+    "status": 200
+  },
+  {
+    "unpaid_path": "/api/v1/waste-rule-preflight",
+    "status": 402,
+    "payment_proof_supplied": false,
+    "test_scope": "unpaid boundary only"
+  }
+]

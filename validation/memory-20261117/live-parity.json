@@ -1,0 +1,7 @@
+{
+  "equal": true,
+  "records": 101526,
+  "before_sha256": "ce7afd5bb43605c3031c06dea743a102b263874413119afcd9c2e1cdcb747573",
+  "after_sha256": "ce7afd5bb43605c3031c06dea743a102b263874413119afcd9c2e1cdcb747573",
+  "snapshot": "read-only SQLite transaction or transient in-memory JSONL snapshot; raw data not exported"
+}

@@ -1,0 +1,18 @@
+{
+  "container_memory_bytes": 149880832,
+  "hashes": {
+    "/app/src/uk_waste_rule_mcp/discovery_observability.py": "f48151ea5435a3355540507c6e76a04d0b632109c0fb3f01bf55dc5c81c37c5c"
+  },
+  "processes": [
+    {
+      "name": "uk-waste-rule-m",
+      "pid": 1,
+      "rss_kib": 145940
+    },
+    {
+      "name": "rwssh-ready",
+      "pid": 12,
+      "rss_kib": 9892
+    }
+  ]
+}

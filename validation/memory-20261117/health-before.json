@@ -1,0 +1,10 @@
+{
+  "contract": "regevidencehub-ops-v1",
+  "status": "review_required",
+  "serving": true,
+  "service": "RegEvidenceHub Waste",
+  "version": "0.4.1",
+  "commit": "a5b8802ba61b",
+  "source_state": "review_required",
+  "payment_state": "ready"
+}
